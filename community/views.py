@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -14,12 +14,77 @@ from .forms import DiscussionForm, ReplyForm
 from .models import CommunitySection, Discussion, Reply, Tag
 
 
+DISCUSSION_SORTS = {
+    'newest': ('-created_at', '-pk'),
+    'oldest': ('created_at', 'pk'),
+    'discussed': ('-reply_count', '-created_at', '-pk'),
+}
+
+SECTION_SORTS = {
+    'name': ('name',),
+    'newest': ('-created_at', '-pk'),
+    'oldest': ('created_at', 'pk'),
+    'popular': ('-follower_count', '-discussion_count', 'name'),
+}
+
+
+def _filter_discussions(request, queryset):
+    query = request.GET.get('q', '').strip()[:100]
+    section_id = request.GET.get('section', '').strip()
+    tag_id = request.GET.get('tag', '').strip()
+    sort = request.GET.get('sort', 'newest')
+
+    if query:
+        queryset = queryset.filter(
+            Q(title__icontains=query)
+            | Q(body__icontains=query)
+            | Q(section__name__icontains=query)
+            | Q(author__username__icontains=query)
+            | Q(tags__name__icontains=query)
+        )
+    if section_id.isdigit():
+        queryset = queryset.filter(section_id=int(section_id))
+    if tag_id.isdigit():
+        queryset = queryset.filter(tags__pk=int(tag_id))
+
+    sort = sort if sort in DISCUSSION_SORTS else 'newest'
+    return (
+        queryset.annotate(reply_count=Count('replies', distinct=True))
+        .distinct()
+        .order_by(*DISCUSSION_SORTS[sort])
+        .prefetch_related('tags')
+    ), {
+        'search_query': query,
+        'selected_section': section_id,
+        'selected_tag': tag_id,
+        'selected_sort': sort,
+    }
+
+
 def section_list(request):
-    sections = CommunitySection.objects.annotate(
+    query = request.GET.get('q', '').strip()[:100]
+    sort = request.GET.get('sort', 'name')
+    if sort not in SECTION_SORTS:
+        sort = 'name'
+
+    sections = CommunitySection.objects.all()
+    if query:
+        sections = sections.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+        )
+    sections = sections.annotate(
         discussion_count=Count('discussions', distinct=True),
         follower_count=Count('followers', distinct=True),
+    ).order_by(*SECTION_SORTS[sort])
+    return render(
+        request,
+        'community/section_list.html',
+        {
+            'sections': sections,
+            'search_query': query,
+            'selected_sort': sort,
+        },
     )
-    return render(request, 'community/section_list.html', {'sections': sections})
 
 
 class SectionDetailView(DetailView):
@@ -29,7 +94,15 @@ class SectionDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['discussions'] = self.object.discussions.select_related('author')
+        discussions, filters = _filter_discussions(
+            self.request,
+            self.object.discussions.select_related('author', 'section'),
+        )
+        context['discussions'] = discussions
+        context['tags'] = Tag.objects.filter(discussions__section=self.object).distinct()
+        context['selected_tag'] = filters['selected_tag']
+        context['selected_sort'] = filters['selected_sort']
+        context['search_query'] = filters['search_query']
         context['is_following'] = (
             self.request.user.is_authenticated
             and self.object.followers.filter(pk=self.request.user.pk).exists()
@@ -56,9 +129,20 @@ class DiscussionListView(ListView):
     model = Discussion
     template_name = 'community/discussion_list.html'
     context_object_name = 'discussions'
-    queryset = Discussion.objects.select_related('section', 'author').annotate(
-        reply_count=Count('replies', distinct=True)
-    ).prefetch_related('tags')
+    def get_queryset(self):
+        queryset, filters = _filter_discussions(
+            self.request,
+            Discussion.objects.select_related('section', 'author'),
+        )
+        self.filter_values = filters
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.filter_values)
+        context['sections'] = CommunitySection.objects.order_by('name')
+        context['tags'] = Tag.objects.order_by('name')
+        return context
 
 
 class TagDiscussionListView(ListView):
@@ -71,16 +155,21 @@ class TagDiscussionListView(ListView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        return (
-            Discussion.objects.filter(tags=self.tag)
-            .select_related('section', 'author')
-            .annotate(reply_count=Count('replies', distinct=True))
-            .prefetch_related('tags')
+        queryset, filters = _filter_discussions(
+            self.request,
+            Discussion.objects.filter(tags=self.tag).select_related(
+                'section', 'author'
+            ),
         )
+        self.filter_values = filters
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['tag'] = self.tag
+        context.update(self.filter_values)
+        context['sections'] = CommunitySection.objects.order_by('name')
+        context['tags'] = Tag.objects.order_by('name')
         return context
 
 

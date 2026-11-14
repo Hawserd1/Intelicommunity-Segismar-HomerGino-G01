@@ -547,6 +547,68 @@ p {
     margin-bottom: 20px;
 }
 
+.filter-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--canvas);
+}
+
+.filter-form label {
+    display: inline-flex;
+}
+
+.filter-form input,
+.filter-form select {
+    min-height: 34px;
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+}
+
+.filter-form input:focus,
+.filter-form select:focus {
+    outline: 2px solid rgb(232 93 36 / 25%);
+    border-color: var(--orange);
+}
+
+.filter-search {
+    flex: 1;
+    min-width: min(260px, 100%);
+}
+
+.filter-search input {
+    width: 100%;
+}
+
+.filter-reset {
+    padding-inline: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.filter-reset:hover {
+    color: var(--orange-dark);
+    text-decoration: underline;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+}
+
 .content-heading h1 {
     margin-bottom: 4px;
     font-size: 28px;

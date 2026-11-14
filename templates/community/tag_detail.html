@@ -17,6 +17,34 @@
             <h2>Tagged discussions</h2>
             <span>{{ discussions|length }} discussion{{ discussions|length|pluralize }}</span>
         </div>
+        <form class="filter-form filter-form-wrap" method="get">
+            <input type="hidden" name="tag" value="{{ tag.pk }}">
+            <label class="filter-search">
+                <span class="visually-hidden">Search discussions with tag {{ tag.name }}</span>
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search discussions tagged #{{ tag.name }}">
+            </label>
+            <label>
+                <span class="visually-hidden">Filter by community</span>
+                <select name="section">
+                    <option value="">All communities</option>
+                    {% for section in sections %}
+                        <option value="{{ section.pk }}" {% if selected_section == section.pk|stringformat:"s" %}selected{% endif %}>{{ section.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Sort discussions</span>
+                <select name="sort">
+                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                    <option value="discussed" {% if selected_sort == 'discussed' %}selected{% endif %}>Most discussed</option>
+                </select>
+            </label>
+            <button class="button button-outline" type="submit">Apply filters</button>
+            {% if search_query or selected_section or selected_sort != 'newest' %}
+                <a class="filter-reset" href="{% url 'community:tag_detail' tag.pk %}">Clear</a>
+            {% endif %}
+        </form>
         {% if discussions %}
             <ul class="discussion-list">
                 {% for discussion in discussions %}

@@ -17,6 +17,25 @@
                 <h2>All sections</h2>
                 <span>{{ sections|length }} section{{ sections|length|pluralize }}</span>
             </div>
+            <form class="filter-form" method="get">
+                <label class="filter-search">
+                    <span class="visually-hidden">Search community sections</span>
+                    <input type="search" name="q" value="{{ search_query }}" placeholder="Search section names and descriptions">
+                </label>
+                <label>
+                    <span class="visually-hidden">Sort sections</span>
+                    <select name="sort">
+                        <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Name</option>
+                        <option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>Most popular</option>
+                        <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest</option>
+                        <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                    </select>
+                </label>
+                <button class="button button-outline" type="submit">Search</button>
+                {% if search_query or selected_sort != 'name' %}
+                    <a class="filter-reset" href="{% url 'community:section_list' %}">Clear</a>
+                {% endif %}
+            </form>
             {% if sections %}
                 <ul class="section-list">
                     {% for section in sections %}
@@ -35,8 +54,13 @@
             {% else %}
                 <div class="empty-state">
                     <span class="empty-icon" aria-hidden="true">#</span>
-                    <h2>Sections are being set up.</h2>
-                    <p>Community sections will appear here once an administrator creates them.</p>
+                    {% if search_query %}
+                        <h2>No sections match that search.</h2>
+                        <p>Try a different keyword or clear your search.</p>
+                    {% else %}
+                        <h2>Sections are being set up.</h2>
+                        <p>Community sections will appear here once an administrator creates them.</p>
+                    {% endif %}
                 </div>
             {% endif %}
         </section>

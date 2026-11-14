@@ -18,9 +18,45 @@
 
     <section class="panel">
         <div class="panel-heading">
-            <h2>Latest discussions</h2>
+            <h2>Discussions</h2>
             <span>{{ discussions|length }} discussion{{ discussions|length|pluralize }}</span>
         </div>
+        <form class="filter-form filter-form-wrap" method="get">
+            <label class="filter-search">
+                <span class="visually-hidden">Search discussions</span>
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search titles, posts, people, or tags">
+            </label>
+            <label>
+                <span class="visually-hidden">Filter by community</span>
+                <select name="section">
+                    <option value="">All communities</option>
+                    {% for section in sections %}
+                        <option value="{{ section.pk }}" {% if selected_section == section.pk|stringformat:"s" %}selected{% endif %}>{{ section.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Filter by tag</span>
+                <select name="tag">
+                    <option value="">All tags</option>
+                    {% for tag in tags %}
+                        <option value="{{ tag.pk }}" {% if selected_tag == tag.pk|stringformat:"s" %}selected{% endif %}>#{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Sort discussions</span>
+                <select name="sort">
+                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                    <option value="discussed" {% if selected_sort == 'discussed' %}selected{% endif %}>Most discussed</option>
+                </select>
+            </label>
+            <button class="button button-outline" type="submit">Apply filters</button>
+            {% if search_query or selected_section or selected_tag or selected_sort != 'newest' %}
+                <a class="filter-reset" href="{% url 'community:discussion_list' %}">Clear</a>
+            {% endif %}
+        </form>
         {% if discussions %}
             <ul class="discussion-list">
                 {% for discussion in discussions %}
@@ -44,9 +80,14 @@
             </ul>
         {% else %}
             <div class="empty-state">
-                <h2>No discussions yet.</h2>
-                <p>Choose a community section and start the first conversation.</p>
-                <a class="button button-outline" href="{% url 'community:section_list' %}">Explore sections</a>
+                {% if search_query or selected_section or selected_tag %}
+                    <h2>No discussions match those filters.</h2>
+                    <p>Try another keyword or clear the selected filters.</p>
+                {% else %}
+                    <h2>No discussions yet.</h2>
+                    <p>Choose a community section and start the first conversation.</p>
+                    <a class="button button-outline" href="{% url 'community:section_list' %}">Explore sections</a>
+                {% endif %}
             </div>
         {% endif %}
     </section>
