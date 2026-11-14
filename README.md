@@ -25,7 +25,7 @@
 3. Create and apply database migrations:
 
    ```powershell
-   .\.venv\Scripts\python.exe manage.py makemigrations accounts
+   .\.venv\Scripts\python.exe manage.py makemigrations
    .\.venv\Scripts\python.exe manage.py migrate
    .\.venv\Scripts\python.exe manage.py createsuperuser
    ```
@@ -38,4 +38,4 @@
 
 The account feature includes registration, login/logout, a protected profile, and separate Standard User, Moderator, and Administrator dashboards. Users can open only the dashboard matching their application role. Field Expert and Creative Professional describe a Standard User's interests or expertise; they are not privileged roles. An Administrator application role alone does not grant Django admin access, which is independently controlled by Django's `is_staff`, `is_superuser`, and model permissions.
 
-Dashboard cards link to planned features. Until implemented, those links show a friendly explanation with HTTP 501; unknown feature links return HTTP 404. The dashboards are a UI foundation, not implementations of the linked community features.
+Community sections, section following, discussions, replies, and discussion tags are available from the dashboard. The initial migration seeds Programming, Engineering, Cooking, Music, and Language sections; administrators can add more sections through Django admin. Users can browse sections and discussions, while signing in is required to follow a section, post or reply. Authors can edit or delete their discussions; moderators and application administrators can also manage discussions. Discussion authors can enter up to five comma-separated tags; tags are normalized and reused, and each tag links to discussions using it. Other dashboard cards link to planned features and show a friendly HTTP 501 page until implemented; unknown feature links return HTTP 404.

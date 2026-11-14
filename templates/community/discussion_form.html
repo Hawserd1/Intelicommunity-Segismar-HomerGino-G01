@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Edit discussion{% else %}Start a discussion{% endif %} | Intelicommunity{% endblock %}
+
+{% block content %}
+    <p class="breadcrumbs"><a href="{% url 'community:discussion_list' %}">Discussions</a> / {% if object %}Edit{% else %}New{% endif %}</p>
+    <section class="form-panel form-panel-wide">
+        <p class="eyebrow">SHARE WHAT YOU KNOW</p>
+        <h1>{% if object %}Edit your discussion{% else %}Start a discussion{% endif %}</h1>
+        <p class="form-intro">Choose the section that fits best, then give your discussion a clear title, details, and optional tags.</p>
+        <form method="post" class="account-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="button-row button-row-left">
+                <button class="button" type="submit">{% if object %}Save changes{% else %}Post discussion{% endif %}</button>
+                <a class="button button-outline" href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'community:discussion_list' %}{% endif %}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

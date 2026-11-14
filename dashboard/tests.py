@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from community.models import CommunitySection, Discussion
+
 User = get_user_model()
 
 
@@ -59,6 +61,49 @@ class RoleDashboardTests(TestCase):
                 self.assertContains(response, expected_text)
                 self.assertContains(response, 'dashboard/site.css')
 
+    def test_standard_user_dashboard_shows_followed_sections_and_their_discussions(self):
+        user = self.make_user(User.Role.STANDARD_USER)
+        followed = CommunitySection.objects.create(
+            name='Dashboard Programming',
+            description='Programming conversations for the dashboard.',
+        )
+        not_followed = CommunitySection.objects.create(
+            name='Dashboard Cooking',
+            description='Cooking conversations not followed by this user.',
+        )
+        followed.followers.add(user)
+        Discussion.objects.create(
+            section=followed,
+            author=user,
+            title='A discussion from my followed section',
+            body='This should appear in my dashboard community activity.',
+        )
+        Discussion.objects.create(
+            section=not_followed,
+            author=user,
+            title='A discussion from a section I do not follow',
+            body='This should not appear in my dashboard community activity.',
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard:member'))
+
+        self.assertContains(response, followed.name)
+        self.assertContains(response, 'A discussion from my followed section')
+        self.assertNotContains(response, not_followed.name)
+        self.assertNotContains(response, 'A discussion from a section I do not follow')
+
+    def test_standard_user_dashboard_shows_explore_prompt_when_no_sections_followed(self):
+        self.client.force_login(self.make_user(User.Role.STANDARD_USER))
+
+        response = self.client.get(reverse('dashboard:member'))
+
+        self.assertContains(response, "You haven't followed a section yet.")
+        self.assertContains(
+            response,
+            reverse('community:section_list'),
+        )
+
     def test_role_dashboards_require_login(self):
         for dashboard_name in (
             'dashboard:member',
@@ -76,11 +121,11 @@ class RoleDashboardTests(TestCase):
     def test_coming_soon_pages_explain_feature_and_return_501(self):
         self.client.force_login(self.make_user(User.Role.STANDARD_USER))
         response = self.client.get(
-            reverse('dashboard:coming_soon', args=('communities',))
+            reverse('dashboard:coming_soon', args=('bookmarks',))
         )
 
         self.assertEqual(response.status_code, 501)
-        self.assertContains(response, 'Community Sections', status_code=501)
+        self.assertContains(response, 'Saved Discussions', status_code=501)
         self.assertContains(response, 'HTTP 501', status_code=501)
 
     def test_unknown_placeholder_feature_returns_404(self):

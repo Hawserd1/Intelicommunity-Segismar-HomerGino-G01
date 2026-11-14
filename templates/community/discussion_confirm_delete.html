@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Delete discussion | Intelicommunity{% endblock %}
+
+{% block content %}
+    <section class="form-panel">
+        <p class="eyebrow">REMOVE DISCUSSION</p>
+        <h1>Delete this discussion?</h1>
+        <p class="form-intro">“{{ object.title }}” and its replies will be permanently deleted. This cannot be undone.</p>
+        <form method="post" class="button-row button-row-left">
+            {% csrf_token %}
+            <button class="button button-danger" type="submit">Yes, delete discussion</button>
+            <a class="button button-outline" href="{{ object.get_absolute_url }}">Keep discussion</a>
+        </form>
+    </section>
+{% endblock %}

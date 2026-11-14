@@ -16,6 +16,8 @@
                 <span>inteli<span class="brand-accent">community</span></span>
             </a>
             <div class="nav-links">
+                <a href="{% url 'community:section_list' %}">Communities</a>
+                <a href="{% url 'community:discussion_list' %}">Discussions</a>
                 {% if user.is_authenticated %}
                     <a href="{% url 'dashboard:home' %}">Dashboard</a>
                     <a href="{% url 'accounts:profile' %}">My profile</a>

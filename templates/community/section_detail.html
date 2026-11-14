@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ section.name }} | Intelicommunity{% endblock %}
+
+{% block content %}
+    <p class="breadcrumbs"><a href="{% url 'community:section_list' %}">Communities</a> / {{ section.name }}</p>
+    <section class="section-header panel">
+        <div class="section-symbol section-symbol-large" aria-hidden="true">#</div>
+        <div class="section-header-copy">
+            <p class="eyebrow">COMMUNITY SECTION</p>
+            <h1>{{ section.name }}</h1>
+            <p>{{ section.description }}</p>
+            <span class="section-stats-inline">{{ section.discussions.count }} discussions · {{ section.followers.count }} followers</span>
+        </div>
+        <div class="section-actions">
+            {% if user.is_authenticated %}
+                <form method="post" action="{% url 'community:toggle_follow' section.slug %}">
+                    {% csrf_token %}
+                    {% if is_following %}
+                        <button class="button button-outline" type="submit">Following · Unfollow</button>
+                    {% else %}
+                        <button class="button" type="submit">Follow section</button>
+                    {% endif %}
+                </form>
+                <a class="button button-outline" href="{% url 'community:section_discussion_create' section.slug %}">New discussion</a>
+            {% else %}
+                <a class="button" href="{% url 'accounts:login' %}?next={{ request.path }}">Log in to join</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel discussion-panel">
+        <div class="panel-heading">
+            <h2>Discussions</h2>
+            <a href="{% url 'community:discussion_list' %}">Browse all discussions</a>
+        </div>
+        {% if discussions %}
+            <ul class="discussion-list">
+                {% for discussion in discussions %}
+                    <li class="discussion-row">
+                        <span class="discussion-marker" aria-hidden="true">●</span>
+                        <div class="discussion-copy">
+                            <a class="discussion-title" href="{{ discussion.get_absolute_url }}">{{ discussion.title }}</a>
+                            <p>{{ discussion.body|truncatewords:30 }}</p>
+                            <small>Started by {{ discussion.author.username }} · {{ discussion.created_at|date:"M j, Y" }}</small>
+                            {% if discussion.tags.all %}
+                                <ul class="tag-list tag-list-compact" aria-label="Discussion tags">
+                                    {% for tag in discussion.tags.all %}
+                                        <li><a href="{% url 'community:tag_detail' tag.pk %}">{{ tag.name }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                        <span class="reply-count">{{ discussion.replies.count }} repl{{ discussion.replies.count|pluralize:"y,ies" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="empty-state">
+                <h2>No discussions here yet.</h2>
+                <p>Be the first to ask a question or share something useful.</p>
+                {% if user.is_authenticated %}
+                    <a class="button" href="{% url 'community:section_discussion_create' section.slug %}">Start a discussion</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

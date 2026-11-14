@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Discussions | Intelicommunity{% endblock %}
+
+{% block content %}
+    <div class="content-heading content-heading-actions">
+        <div>
+            <p class="eyebrow">SHARED KNOWLEDGE</p>
+            <h1>Discussions</h1>
+            <p>Questions, ideas, and insights from across the community.</p>
+        </div>
+        {% if user.is_authenticated %}
+            <a class="button" href="{% url 'community:discussion_create' %}">Start a discussion</a>
+        {% else %}
+            <a class="button" href="{% url 'accounts:login' %}?next={{ request.path }}">Log in to participate</a>
+        {% endif %}
+    </div>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2>Latest discussions</h2>
+            <span>{{ discussions|length }} discussion{{ discussions|length|pluralize }}</span>
+        </div>
+        {% if discussions %}
+            <ul class="discussion-list">
+                {% for discussion in discussions %}
+                    <li class="discussion-row">
+                        <span class="discussion-marker" aria-hidden="true">●</span>
+                        <div class="discussion-copy">
+                            <a class="discussion-title" href="{{ discussion.get_absolute_url }}">{{ discussion.title }}</a>
+                            <p>{{ discussion.body|truncatewords:32 }}</p>
+                            <small>in <a href="{{ discussion.section.get_absolute_url }}">{{ discussion.section.name }}</a> · {{ discussion.author.username }} · {{ discussion.created_at|date:"M j, Y" }}</small>
+                            {% if discussion.tags.all %}
+                                <ul class="tag-list tag-list-compact" aria-label="Discussion tags">
+                                    {% for tag in discussion.tags.all %}
+                                        <li><a href="{% url 'community:tag_detail' tag.pk %}">{{ tag.name }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                        <span class="reply-count">{{ discussion.reply_count }} repl{{ discussion.reply_count|pluralize:"y,ies" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="empty-state">
+                <h2>No discussions yet.</h2>
+                <p>Choose a community section and start the first conversation.</p>
+                <a class="button button-outline" href="{% url 'community:section_list' %}">Explore sections</a>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

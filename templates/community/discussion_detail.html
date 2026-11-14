@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ discussion.title }} | Intelicommunity{% endblock %}
+
+{% block content %}
+    <p class="breadcrumbs"><a href="{% url 'community:section_list' %}">Communities</a> / <a href="{{ discussion.section.get_absolute_url }}">{{ discussion.section.name }}</a> / Discussion</p>
+    <article class="panel discussion-detail">
+        <div class="discussion-detail-heading">
+            <div>
+                <p class="eyebrow">{{ discussion.section.name }}</p>
+                <h1>{{ discussion.title }}</h1>
+                <p class="discussion-byline">Started by <strong>{{ discussion.author.username }}</strong> · {{ discussion.created_at|date:"M j, Y, g:i a" }}</p>
+            </div>
+            {% if can_manage %}
+                <div class="inline-actions">
+                    <a class="button button-outline" href="{% url 'community:discussion_update' discussion.pk %}">Edit</a>
+                    <a class="button button-danger" href="{% url 'community:discussion_delete' discussion.pk %}">Delete</a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="discussion-body">{{ discussion.body|linebreaks }}</div>
+        {% if discussion.tags.exists %}
+            <ul class="tag-list" aria-label="Discussion tags">
+                {% for tag in discussion.tags.all %}
+                    <li><a href="{% url 'community:tag_detail' tag.pk %}">{{ tag.name }}</a></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </article>
+
+    <section class="panel replies-panel">
+        <div class="panel-heading">
+            <h2>Replies</h2>
+            <span>{{ discussion.replies.count }}</span>
+        </div>
+        {% for reply in discussion.replies.all %}
+            <article class="reply-row">
+                <div class="reply-avatar" aria-hidden="true">{{ reply.author.username|first|upper }}</div>
+                <div class="reply-copy">
+                    <p class="reply-byline"><strong>{{ reply.author.username }}</strong> replied {{ reply.created_at|date:"M j, Y, g:i a" }}</p>
+                    <div>{{ reply.body|linebreaks }}</div>
+                </div>
+            </article>
+        {% empty %}
+            <p class="reply-empty">No replies yet. Add the first helpful response.</p>
+        {% endfor %}
+
+        {% if user.is_authenticated %}
+            <form class="reply-form" method="post" action="{% url 'community:reply_create' discussion.pk %}">
+                {% csrf_token %}
+                {{ reply_form.as_p }}
+                <button class="button" type="submit">Post reply</button>
+            </form>
+        {% else %}
+            <p class="reply-empty"><a href="{% url 'accounts:login' %}?next={{ request.path }}">Log in</a> to reply to this discussion.</p>
+        {% endif %}
+    </section>
+{% endblock %}

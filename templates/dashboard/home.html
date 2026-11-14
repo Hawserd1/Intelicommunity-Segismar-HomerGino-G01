@@ -18,12 +18,55 @@
                 <h2>Your community</h2>
                 <span>Welcome, {{ user.first_name|default:user.username }}</span>
             </div>
-            <div class="empty-state">
-                <span class="empty-icon" aria-hidden="true">i</span>
-                <h2>Your community is just getting started.</h2>
-                <p>Community conversations and activity will appear here as Intelicommunity grows.</p>
-                <a class="button" href="{% url 'accounts:profile' %}">Set up your profile</a>
-            </div>
+            {% if followed_sections %}
+                <div class="followed-section-list">
+                    <h3>Sections you follow</h3>
+                    <ul class="section-list">
+                        {% for section in followed_sections %}
+                            <li>
+                                <a class="section-row" href="{{ section.get_absolute_url }}">
+                                    <span class="section-symbol" aria-hidden="true">#</span>
+                                    <span class="section-copy">
+                                        <strong>{{ section.name }}</strong>
+                                        <small>{{ section.description|truncatewords:16 }}</small>
+                                    </span>
+                                    <span class="section-stats">{{ section.discussion_count }} discussions</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                {% if followed_discussions %}
+                    <div class="followed-activity">
+                        <div class="panel-heading">
+                            <h3>Recent discussions in your sections</h3>
+                        </div>
+                        <ul class="discussion-list">
+                            {% for discussion in followed_discussions %}
+                                <li class="discussion-row">
+                                    <span class="discussion-marker" aria-hidden="true">●</span>
+                                    <div class="discussion-copy">
+                                        <a class="discussion-title" href="{{ discussion.get_absolute_url }}">{{ discussion.title }}</a>
+                                        <p>{{ discussion.body|truncatewords:20 }}</p>
+                                        <small><a href="{{ discussion.section.get_absolute_url }}">{{ discussion.section.name }}</a> · {{ discussion.author.username }} · {{ discussion.created_at|date:"M j, Y" }}</small>
+                                    </div>
+                                    <span class="reply-count">{{ discussion.reply_count }} repl{{ discussion.reply_count|pluralize:"y,ies" }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <p class="followed-empty">No discussions in your followed sections yet. Start one and get the conversation going.</p>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true">i</span>
+                    <h2>You haven't followed a section yet.</h2>
+                    <p>Follow a community section to see it and its latest discussions here.</p>
+                    <a class="button" href="{% url 'community:section_list' %}">Explore communities</a>
+                </div>
+            {% endif %}
         </section>
 
         <aside class="dashboard-sidebar">
@@ -34,7 +77,17 @@
                 <ul class="feature-list">
                     {% for slug, title, description, action in cards %}
                         <li>
-                            {% if slug == 'user-management' and user.is_staff %}
+                            {% if slug == 'communities' %}
+                                <a class="feature-link" href="{% url 'community:section_list' %}">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="feature-arrow" aria-hidden="true">↗</span>
+                                </a>
+                            {% elif slug == 'discussions' %}
+                                <a class="feature-link" href="{% url 'community:discussion_list' %}">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="feature-arrow" aria-hidden="true">↗</span>
+                                </a>
+                            {% elif slug == 'user-management' and user.is_staff %}
                                 <a class="feature-link" href="{% url 'dashboard:user_management' %}">
                                     <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
                                     <span class="feature-arrow" aria-hidden="true">↗</span>
