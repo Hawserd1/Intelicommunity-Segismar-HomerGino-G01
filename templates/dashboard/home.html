@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ role_label }} dashboard | Intelicommunity{% endblock %}
+
+{% block content %}
+    <section class="dashboard-heading">
+        <div>
+            <p class="eyebrow">{{ eyebrow }}</p>
+            <h1>{{ heading }}</h1>
+            <p>{{ intro }}</p>
+        </div>
+        <span class="role-pill">{{ role_label }}</span>
+    </section>
+
+    <div class="dashboard-layout">
+        <section class="dashboard-main panel" aria-label="Your community activity">
+            <div class="panel-heading">
+                <h2>Your community</h2>
+                <span>Welcome, {{ user.first_name|default:user.username }}</span>
+            </div>
+            <div class="empty-state">
+                <span class="empty-icon" aria-hidden="true">i</span>
+                <h2>Your community is just getting started.</h2>
+                <p>Community conversations and activity will appear here as Intelicommunity grows.</p>
+                <a class="button" href="{% url 'accounts:profile' %}">Set up your profile</a>
+            </div>
+        </section>
+
+        <aside class="dashboard-sidebar">
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2>Explore Intelicommunity</h2>
+                </div>
+                <ul class="feature-list">
+                    {% for slug, title, description, action in cards %}
+                        <li>
+                            {% if slug == 'user-management' and user.is_staff %}
+                                <a class="feature-link" href="{% url 'dashboard:user_management' %}">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="feature-arrow" aria-hidden="true">↗</span>
+                                </a>
+                            {% elif slug == 'user-management' %}
+                                <div class="feature-link">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="coming-label">Staff only</span>
+                                </div>
+                            {% else %}
+                                <a class="feature-link" href="{% url 'dashboard:coming_soon' slug %}">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="coming-label">Soon</span>
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+            <div class="sidebar-note">
+                <strong>A community for curious minds.</strong><br>
+                Field experts, creative professionals, and neighbors all join as standard users to share and learn together.
+            </div>
+        </aside>
+    </div>
+{% endblock %}

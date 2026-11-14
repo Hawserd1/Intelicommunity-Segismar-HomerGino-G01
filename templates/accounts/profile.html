@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}My profile | Intelicommunity{% endblock %}
+
+{% block content %}
+    <section class="form-panel">
+        <p class="eyebrow">YOUR ACCOUNT</p>
+        <h1>My profile</h1>
+        <p class="form-intro">Keep your details up to date. Your account role is managed separately.</p>
+        <div class="profile-summary">
+            <span>Username</span><strong>{{ user.username }}</strong>
+            <span>Community role</span><strong>{{ user.get_role_display }}</strong>
+        </div>
+        <form method="post" class="account-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="button" type="submit">Save profile</button>
+        </form>
+    </section>
+{% endblock %}

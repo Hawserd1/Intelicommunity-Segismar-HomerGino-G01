@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Log in | Intelicommunity{% endblock %}
+
+{% block content %}
+    <section class="form-panel">
+        <p class="eyebrow">WELCOME BACK</p>
+        <h1>Good to see you again.</h1>
+        <p class="form-intro">Log in to pick up where your community left off.</p>
+        <form method="post" class="account-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="button" type="submit">Log in</button>
+        </form>
+        <p class="form-footnote">New to Intelicommunity? <a href="{% url 'accounts:register' %}">Create an account</a>.</p>
+    </section>
+{% endblock %}
