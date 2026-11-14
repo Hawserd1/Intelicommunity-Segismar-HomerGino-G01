@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ feature_title }} | Coming soon{% endblock %}
+
+{% block content %}
+    <section class="coming-soon-panel">
+        <p class="eyebrow">IN THE WORKS</p>
+        <span class="coming-soon-mark" aria-hidden="true">✳</span>
+        <h1>{{ feature_title }} is coming soon.</h1>
+        <p>We’re laying the groundwork for this feature. For now, you can update your profile or head back to your dashboard.</p>
+        <div class="button-row">
+            <a class="button" href="{% url 'dashboard:home' %}">Back to dashboard</a>
+            <a class="button button-outline" href="{% url 'accounts:profile' %}">View your profile</a>
+        </div>
+        <p class="status-caption">This feature is not available yet (HTTP 501).</p>
+    </section>
+{% endblock %}
