@@ -269,6 +269,37 @@ p {
     font-size: 12px;
 }
 
+.followed-section-list > h3 {
+    margin: 0;
+    padding: 11px 15px 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.followed-activity {
+    border-top: 1px solid var(--line);
+}
+
+.followed-activity .panel-heading {
+    background: var(--paper);
+}
+
+.followed-activity .panel-heading h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.followed-empty {
+    margin: 0;
+    padding: 15px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+}
+
 .empty-state {
     padding: 36px 22px;
     text-align: center;
@@ -508,6 +539,406 @@ p {
     font-size: 12px;
 }
 
+.content-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.content-heading h1 {
+    margin-bottom: 4px;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+}
+
+.content-heading p:not(.eyebrow) {
+    margin-bottom: 0;
+    color: var(--muted);
+}
+
+.content-heading-actions {
+    align-items: center;
+}
+
+.community-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    align-items: start;
+    gap: 20px;
+}
+
+.section-list,
+.discussion-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.section-list li + li,
+.discussion-row + .discussion-row {
+    border-top: 1px solid var(--line);
+}
+
+.section-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 15px;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.section-row:hover,
+.discussion-row:hover {
+    background: var(--canvas);
+}
+
+.section-symbol {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    place-items: center;
+    border: 1px solid #f1c6ac;
+    border-radius: 6px;
+    background: var(--orange-pale);
+    color: var(--orange-dark);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.section-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.section-copy strong,
+.section-copy small {
+    display: block;
+}
+
+.section-copy strong {
+    margin-bottom: 3px;
+    color: var(--orange-dark);
+    font-size: 14px;
+}
+
+.section-copy small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.section-stats {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 11px;
+    text-align: right;
+}
+
+.sidebar-note {
+    margin-top: 0;
+}
+
+.breadcrumbs {
+    margin-bottom: 15px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.breadcrumbs a {
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 17px;
+    margin-bottom: 20px;
+    padding: 20px;
+}
+
+.section-symbol-large {
+    width: 48px;
+    height: 48px;
+    font-size: 28px;
+}
+
+.section-header-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.section-header-copy .eyebrow {
+    margin-bottom: 2px;
+}
+
+.section-header-copy h1 {
+    margin-bottom: 4px;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+}
+
+.section-header-copy > p:not(.eyebrow) {
+    margin-bottom: 5px;
+    color: var(--muted);
+}
+
+.section-stats-inline {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.section-actions {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.section-actions form {
+    margin: 0;
+}
+
+.discussion-panel {
+    margin-top: 18px;
+}
+
+.panel-heading a {
+    color: var(--orange-dark);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.discussion-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px;
+}
+
+.discussion-marker {
+    padding-top: 2px;
+    color: var(--green);
+    font-size: 12px;
+}
+
+.discussion-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.discussion-title {
+    color: var(--orange-dark);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.discussion-title:hover {
+    text-decoration: underline;
+}
+
+.discussion-copy p {
+    margin: 3px 0 5px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.discussion-copy small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.discussion-copy small a {
+    text-decoration: none;
+}
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tag-list a,
+.tag-chip {
+    display: inline-flex;
+    padding: 2px 9px;
+    border: 1px solid #f1c6ac;
+    border-radius: 999px;
+    background: var(--orange-pale);
+    color: var(--orange-dark);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.tag-list a:hover {
+    border-color: var(--orange);
+    text-decoration: none;
+}
+
+.tag-list-compact {
+    margin-top: 7px;
+}
+
+.tag-list-compact a {
+    padding: 1px 7px;
+    font-size: 11px;
+}
+
+.reply-count {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.form-panel-wide {
+    width: min(760px, 100%);
+}
+
+.account-form select {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid #d1d9e0;
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+}
+
+.button-row-left {
+    justify-content: flex-start;
+}
+
+.button-danger {
+    border-color: rgb(31 35 40 / 15%);
+    background: #cf222e;
+}
+
+.button-danger:hover {
+    background: #a40e26;
+}
+
+.discussion-detail {
+    padding: 20px;
+}
+
+.discussion-detail-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--line);
+}
+
+.discussion-detail-heading h1 {
+    margin-bottom: 6px;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+}
+
+.discussion-byline,
+.reply-byline {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.inline-actions {
+    display: flex;
+    gap: 7px;
+}
+
+.discussion-body {
+    padding-top: 17px;
+    font-size: 14px;
+}
+
+.discussion-body p:last-child,
+.reply-copy p:last-child {
+    margin-bottom: 0;
+}
+
+.replies-panel {
+    margin-top: 20px;
+}
+
+.reply-row {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.reply-avatar {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--orange-pale);
+    color: var(--orange-dark);
+    font-weight: 700;
+}
+
+.reply-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-byline {
+    margin-bottom: 7px;
+}
+
+.reply-copy > div {
+    font-size: 13px;
+}
+
+.reply-empty {
+    margin: 0;
+    padding: 17px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.reply-form {
+    padding: 16px;
+    background: var(--canvas);
+}
+
+.reply-form p {
+    margin-bottom: 10px;
+}
+
+.reply-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.reply-form textarea {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+}
+
 @media (max-width: 760px) {
     .dashboard-layout {
         grid-template-columns: 1fr;
@@ -522,6 +953,25 @@ p {
 
     .sidebar-note {
         margin-top: 0;
+    }
+
+    .community-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .section-header {
+        flex-wrap: wrap;
+    }
+
+    .section-header-copy {
+        flex-basis: calc(100% - 70px);
+    }
+
+    .section-actions {
+        flex-basis: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding-left: 65px;
     }
 }
 
@@ -561,6 +1011,35 @@ p {
 
     .dashboard-sidebar {
         grid-template-columns: 1fr;
+    }
+
+    .content-heading,
+    .content-heading-actions,
+    .discussion-detail-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .section-row {
+        flex-wrap: wrap;
+    }
+
+    .section-stats {
+        flex-basis: 100%;
+        margin-left: 47px;
+        text-align: left;
+    }
+
+    .section-actions {
+        padding-left: 0;
+    }
+
+    .discussion-row {
+        flex-wrap: wrap;
+    }
+
+    .reply-count {
+        margin-left: 24px;
     }
 
     .site-footer {

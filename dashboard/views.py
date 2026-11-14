@@ -5,8 +5,10 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseNotFound
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.db.models import Count
 
 from accounts.models import CustomUser
+from community.models import Discussion
 
 
 ROLE_DASHBOARDS = {
@@ -22,7 +24,7 @@ DASHBOARD_CONTENT = {
         'intro': 'Find your people, share what you know, and keep useful answers close.',
         'cards': (
             ('communities', 'Explore communities', 'Find conversations in topics you care about.', 'Explore'),
-            ('discussions', 'Start a discussion', 'Ask a question or share an idea with the community.', 'Get started'),
+            ('discussions', 'Browse discussions', 'Read questions and insights shared by the community.', 'Browse'),
             ('bookmarks', 'Your bookmarks', 'Useful discussions you save will be easy to find here.', 'Coming soon'),
             ('notifications', 'Notifications', 'Keep up with replies and activity on your posts.', 'Coming soon'),
         ),
@@ -33,7 +35,7 @@ DASHBOARD_CONTENT = {
         'intro': 'A clear view of community reports and the tools moderators will use to review them.',
         'cards': (
             ('reports', 'Reported content', 'Review community reports and decide what needs attention.', 'Coming soon'),
-            ('discussions', 'Community discussions', 'Browse conversations that may need moderator support.', 'Coming soon'),
+            ('discussions', 'Community discussions', 'Browse conversations that may need moderator support.', 'Browse'),
             ('activity-reports', 'Activity overview', 'See moderation and community activity summaries.', 'Coming soon'),
         ),
     },
@@ -50,8 +52,6 @@ DASHBOARD_CONTENT = {
 }
 
 COMING_SOON_FEATURES = {
-    'communities': 'Community Sections',
-    'discussions': 'Discussions',
     'bookmarks': 'Saved Discussions',
     'notifications': 'Notifications',
     'reports': 'Content Reports',
@@ -83,13 +83,23 @@ def home(request):
 
 
 def _render_dashboard(request, role):
+    context = {
+        **DASHBOARD_CONTENT[role],
+        'role_label': request.user.get_role_display(),
+    }
+    if role == CustomUser.Role.STANDARD_USER:
+        context['followed_sections'] = request.user.followed_sections.annotate(
+            discussion_count=Count('discussions', distinct=True)
+        )
+        context['followed_discussions'] = (
+            Discussion.objects.filter(section__followers=request.user)
+            .select_related('section', 'author')
+            .annotate(reply_count=Count('replies', distinct=True))[:5]
+        )
     return render(
         request,
         'dashboard/home.html',
-        {
-            **DASHBOARD_CONTENT[role],
-            'role_label': request.user.get_role_display(),
-        },
+        context,
     )
 
 

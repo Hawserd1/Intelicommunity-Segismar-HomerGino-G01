@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Communities | Intelicommunity{% endblock %}
+
+{% block content %}
+    <div class="content-heading">
+        <div>
+            <p class="eyebrow">FIND YOUR PEOPLE</p>
+            <h1>Community sections</h1>
+            <p>Explore topics, follow the ones you like, and join the conversation.</p>
+        </div>
+    </div>
+
+    <div class="community-layout">
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>All sections</h2>
+                <span>{{ sections|length }} section{{ sections|length|pluralize }}</span>
+            </div>
+            {% if sections %}
+                <ul class="section-list">
+                    {% for section in sections %}
+                        <li>
+                            <a class="section-row" href="{{ section.get_absolute_url }}">
+                                <span class="section-symbol" aria-hidden="true">#</span>
+                                <span class="section-copy">
+                                    <strong>{{ section.name }}</strong>
+                                    <small>{{ section.description|truncatewords:24 }}</small>
+                                </span>
+                                <span class="section-stats">{{ section.discussion_count }} discussions<br>{{ section.follower_count }} followers</span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-state">
+                    <span class="empty-icon" aria-hidden="true">#</span>
+                    <h2>Sections are being set up.</h2>
+                    <p>Community sections will appear here once an administrator creates them.</p>
+                </div>
+            {% endif %}
+        </section>
+        <aside class="sidebar-note">
+            <strong>Start with a topic.</strong><br>
+            Sections keep related questions and useful answers together. Sign in to follow a section or start a discussion.
+        </aside>
+    </div>
+{% endblock %}

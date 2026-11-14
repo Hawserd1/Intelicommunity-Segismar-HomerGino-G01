@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Tag: {{ tag.name }} | Intelicommunity{% endblock %}
+
+{% block content %}
+    <p class="breadcrumbs"><a href="{% url 'community:discussion_list' %}">Discussions</a> / Tag</p>
+    <div class="content-heading">
+        <div>
+            <p class="eyebrow">DISCUSSIONS BY TAG</p>
+            <h1><span class="tag-chip">#{{ tag.name }}</span></h1>
+            <p>Discussions marked with this tag.</p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2>Tagged discussions</h2>
+            <span>{{ discussions|length }} discussion{{ discussions|length|pluralize }}</span>
+        </div>
+        {% if discussions %}
+            <ul class="discussion-list">
+                {% for discussion in discussions %}
+                    <li class="discussion-row">
+                        <span class="discussion-marker" aria-hidden="true">●</span>
+                        <div class="discussion-copy">
+                            <a class="discussion-title" href="{{ discussion.get_absolute_url }}">{{ discussion.title }}</a>
+                            <p>{{ discussion.body|truncatewords:32 }}</p>
+                            <small>in <a href="{{ discussion.section.get_absolute_url }}">{{ discussion.section.name }}</a> · {{ discussion.author.username }} · {{ discussion.created_at|date:"M j, Y" }}</small>
+                            <ul class="tag-list tag-list-compact" aria-label="Discussion tags">
+                                {% for discussion_tag in discussion.tags.all %}
+                                    <li><a href="{% url 'community:tag_detail' discussion_tag.pk %}">{{ discussion_tag.name }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <span class="reply-count">{{ discussion.reply_count }} repl{{ discussion.reply_count|pluralize:"y,ies" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="empty-state">
+                <h2>No discussions use this tag yet.</h2>
+                <p>Start a discussion and add this tag to help others find it.</p>
+                <a class="button button-outline" href="{% url 'community:discussion_list' %}">Browse discussions</a>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}
