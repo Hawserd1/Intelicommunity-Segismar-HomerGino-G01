@@ -86,3 +86,38 @@ class Reply(models.Model):
 
     def __str__(self):
         return f'Reply by {self.author} on {self.discussion}'
+
+
+class Vote(models.Model):
+    class Value(models.TextChoices):
+        UP = 'up', 'Upvote'
+        DOWN = 'down', 'Downvote'
+
+    discussion = models.ForeignKey(
+        Discussion,
+        on_delete=models.CASCADE,
+        related_name='votes',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='discussion_votes',
+    )
+    value = models.CharField(max_length=4, choices=Value.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('discussion', 'user'),
+                name='unique_vote_per_user_discussion',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(value__in=('up', 'down')),
+                name='vote_value_must_be_up_or_down',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_value_display()} by {self.user} on {self.discussion}'
