@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Q
-from django.http import HttpResponseNotAllowed
+from django.db.models import CharField, Count, OuterRef, Q, Subquery, Value
+from django.http import HttpResponseBadRequest, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -11,7 +11,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from accounts.models import CustomUser
 
 from .forms import DiscussionForm, ReplyForm
-from .models import CommunitySection, Discussion, Reply, Tag
+from .models import CommunitySection, Discussion, Reply, Tag, Vote
 
 
 DISCUSSION_SORTS = {
@@ -26,6 +26,31 @@ SECTION_SORTS = {
     'oldest': ('created_at', 'pk'),
     'popular': ('-follower_count', '-discussion_count', 'name'),
 }
+
+
+def _annotate_discussion_votes(request, queryset):
+    queryset = queryset.annotate(
+        upvote_count=Count(
+            'votes',
+            filter=Q(votes__value=Vote.Value.UP),
+            distinct=True,
+        ),
+        downvote_count=Count(
+            'votes',
+            filter=Q(votes__value=Vote.Value.DOWN),
+            distinct=True,
+        ),
+    )
+    if request.user.is_authenticated:
+        user_vote = Subquery(
+            Vote.objects.filter(
+                discussion_id=OuterRef('pk'),
+                user_id=request.user.pk,
+            ).values('value')[:1]
+        )
+    else:
+        user_vote = Value('', output_field=CharField())
+    return queryset.annotate(user_vote=user_vote)
 
 
 def _filter_discussions(request, queryset):
@@ -48,8 +73,10 @@ def _filter_discussions(request, queryset):
         queryset = queryset.filter(tags__pk=int(tag_id))
 
     sort = sort if sort in DISCUSSION_SORTS else 'newest'
+    queryset = queryset.annotate(reply_count=Count('replies', distinct=True))
+    queryset = _annotate_discussion_votes(request, queryset)
     return (
-        queryset.annotate(reply_count=Count('replies', distinct=True))
+        queryset
         .distinct()
         .order_by(*DISCUSSION_SORTS[sort])
         .prefetch_related('tags')
@@ -129,6 +156,7 @@ class DiscussionListView(ListView):
     model = Discussion
     template_name = 'community/discussion_list.html'
     context_object_name = 'discussions'
+
     def get_queryset(self):
         queryset, filters = _filter_discussions(
             self.request,
@@ -207,9 +235,12 @@ class DiscussionDetailView(DetailView):
     model = Discussion
     template_name = 'community/discussion_detail.html'
     context_object_name = 'discussion'
-    queryset = Discussion.objects.select_related('section', 'author').prefetch_related(
-        'replies__author', 'tags'
-    )
+
+    def get_queryset(self):
+        queryset = Discussion.objects.select_related(
+            'section', 'author'
+        ).prefetch_related('replies__author', 'tags')
+        return _annotate_discussion_votes(self.request, queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -235,6 +266,15 @@ def add_reply(request, pk):
         messages.success(request, 'Your reply has been added.')
         return redirect(discussion)
 
+    discussion = get_object_or_404(
+        _annotate_discussion_votes(
+            request,
+            Discussion.objects.select_related('section', 'author').prefetch_related(
+                'replies__author', 'tags'
+            ),
+        ),
+        pk=pk,
+    )
     return render(
         request,
         'community/discussion_detail.html',
@@ -245,6 +285,33 @@ def add_reply(request, pk):
         },
         status=400,
     )
+
+
+@login_required
+def vote_discussion(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    value = request.POST.get('value')
+    if value not in Vote.Value.values:
+        return HttpResponseBadRequest('Choose either an upvote or a downvote.')
+
+    discussion = get_object_or_404(Discussion, pk=pk)
+    vote, created = Vote.objects.get_or_create(
+        discussion=discussion,
+        user=request.user,
+        defaults={'value': value},
+    )
+    if created:
+        messages.success(request, 'Your vote has been recorded.')
+    elif vote.value == value:
+        vote.delete()
+        messages.success(request, 'Your vote has been removed.')
+    else:
+        vote.value = value
+        vote.save(update_fields=('value', 'updated_at'))
+        messages.success(request, 'Your vote has been changed.')
+    return redirect(discussion)
 
 
 def _can_manage_discussion(user, discussion):

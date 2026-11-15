@@ -74,7 +74,10 @@
                                 </ul>
                             {% endif %}
                         </div>
-                        <span class="reply-count">{{ discussion.reply_count }} repl{{ discussion.reply_count|pluralize:"y,ies" }}</span>
+                        <div class="discussion-row-stats">
+                            <span class="reply-count">{{ discussion.reply_count }} repl{{ discussion.reply_count|pluralize:"y,ies" }}</span>
+                            {% include "community/_vote_controls.html" with compact=True %}
+                        </div>
                     </li>
                 {% endfor %}
             </ul>

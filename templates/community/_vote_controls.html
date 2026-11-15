@@ -1,0 +1,20 @@
+<div class="vote-controls{% if compact %} vote-controls-compact{% endif %}" aria-label="Discussion votes">
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'community:discussion_vote' discussion.pk %}">
+            {% csrf_token %}
+            <button class="vote-button{% if discussion.user_vote == 'up' %} is-selected{% endif %}" type="submit" name="value" value="up" aria-label="Upvote this discussion" aria-pressed="{% if discussion.user_vote == 'up' %}true{% else %}false{% endif %}">
+                <span aria-hidden="true">▲</span> {{ discussion.upvote_count }}
+            </button>
+        </form>
+        <form method="post" action="{% url 'community:discussion_vote' discussion.pk %}">
+            {% csrf_token %}
+            <button class="vote-button{% if discussion.user_vote == 'down' %} is-selected{% endif %}" type="submit" name="value" value="down" aria-label="Downvote this discussion" aria-pressed="{% if discussion.user_vote == 'down' %}true{% else %}false{% endif %}">
+                <span aria-hidden="true">▼</span> {{ discussion.downvote_count }}
+            </button>
+        </form>
+    {% else %}
+        <span class="vote-total"><span aria-hidden="true">▲</span> {{ discussion.upvote_count }} <span class="visually-hidden">upvotes</span></span>
+        <span class="vote-total"><span aria-hidden="true">▼</span> {{ discussion.downvote_count }} <span class="visually-hidden">downvotes</span></span>
+        <a class="vote-login" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Log in to vote</a>
+    {% endif %}
+</div>

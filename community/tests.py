@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .forms import DiscussionForm
-from .models import CommunitySection, Discussion, Reply, Tag
+from .models import CommunitySection, Discussion, Reply, Tag, Vote
 
 User = get_user_model()
 
@@ -317,6 +317,78 @@ class CommunityFeatureTests(TestCase):
             response,
             f'{reverse("accounts:login")}?next={reply_url}',
         )
+
+    def test_members_can_add_remove_and_change_discussion_votes(self):
+        self.client.force_login(self.other_member)
+        vote_url = reverse('community:discussion_vote', args=(self.discussion.pk,))
+
+        response = self.client.post(vote_url, {'value': Vote.Value.UP})
+        self.assertRedirects(response, self.discussion.get_absolute_url())
+        self.assertEqual(
+            Vote.objects.get(discussion=self.discussion, user=self.other_member).value,
+            Vote.Value.UP,
+        )
+
+        detail_response = self.client.get(self.discussion.get_absolute_url())
+        self.assertContains(detail_response, 'aria-pressed="true"')
+        self.assertContains(detail_response, '▲</span> 1')
+
+        self.client.post(vote_url, {'value': Vote.Value.DOWN})
+        vote = Vote.objects.get(discussion=self.discussion, user=self.other_member)
+        self.assertEqual(vote.value, Vote.Value.DOWN)
+        self.assertEqual(
+            Vote.objects.filter(discussion=self.discussion, user=self.other_member).count(),
+            1,
+        )
+
+        self.client.post(vote_url, {'value': Vote.Value.DOWN})
+        self.assertFalse(
+            Vote.objects.filter(discussion=self.discussion, user=self.other_member).exists()
+        )
+
+    def test_discussion_votes_require_login_and_post_with_a_valid_choice(self):
+        vote_url = reverse('community:discussion_vote', args=(self.discussion.pk,))
+        response = self.client.post(vote_url, {'value': Vote.Value.UP})
+        self.assertRedirects(
+            response,
+            f'{reverse("accounts:login")}?next={vote_url}',
+        )
+
+        self.client.force_login(self.member)
+        self.assertEqual(self.client.get(vote_url).status_code, 405)
+        response = self.client.post(vote_url, {'value': 'neutral'})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Vote.objects.filter(discussion=self.discussion).exists())
+
+    def test_vote_counts_are_visible_on_discussion_list_and_detail(self):
+        tag = Tag.objects.create(name='vote-count-test')
+        self.discussion.tags.add(tag)
+        Vote.objects.create(
+            discussion=self.discussion,
+            user=self.other_member,
+            value=Vote.Value.UP,
+        )
+        Vote.objects.create(
+            discussion=self.discussion,
+            user=self.moderator,
+            value=Vote.Value.DOWN,
+        )
+
+        list_response = self.client.get(reverse('community:discussion_list'))
+        self.assertContains(list_response, '▲</span> 1')
+        self.assertContains(list_response, '▼</span> 1')
+
+        detail_response = self.client.get(self.discussion.get_absolute_url())
+        self.assertContains(detail_response, '▲</span> 1')
+        self.assertContains(detail_response, '▼</span> 1')
+
+        section_response = self.client.get(self.section.get_absolute_url())
+        self.assertContains(section_response, '▲</span> 1')
+        self.assertContains(section_response, '▼</span> 1')
+
+        tag_response = self.client.get(reverse('community:tag_detail', args=(tag.pk,)))
+        self.assertContains(tag_response, '▲</span> 1')
+        self.assertContains(tag_response, '▼</span> 1')
 
     def test_author_can_update_and_delete_their_discussion(self):
         self.client.force_login(self.member)

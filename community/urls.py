@@ -14,6 +14,7 @@ urlpatterns = [
     path('discussions/new/', views.DiscussionCreateView.as_view(), name='discussion_create'),
     path('discussions/<int:pk>/', views.DiscussionDetailView.as_view(), name='discussion_detail'),
     path('discussions/<int:pk>/reply/', views.add_reply, name='reply_create'),
+    path('discussions/<int:pk>/vote/', views.vote_discussion, name='discussion_vote'),
     path('discussions/<int:pk>/edit/', views.DiscussionUpdateView.as_view(), name='discussion_update'),
     path('discussions/<int:pk>/delete/', views.DiscussionDeleteView.as_view(), name='discussion_delete'),
 ]

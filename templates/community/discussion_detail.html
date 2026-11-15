@@ -19,6 +19,7 @@
             {% endif %}
         </div>
         <div class="discussion-body">{{ discussion.body|linebreaks }}</div>
+        {% include "community/_vote_controls.html" %}
         {% if discussion.tags.exists %}
             <ul class="tag-list" aria-label="Discussion tags">
                 {% for tag in discussion.tags.all %}
