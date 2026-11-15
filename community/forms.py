@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Discussion, Reply, Tag
+from .models import ContentReport, Discussion, Reply, Tag
 
 
 class DiscussionForm(forms.ModelForm):
@@ -67,4 +67,22 @@ class ReplyForm(forms.ModelForm):
         labels = {'body': 'Your reply'}
         widgets = {
             'body': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Share a helpful reply...'}),
+        }
+
+
+class ContentReportForm(forms.ModelForm):
+    class Meta:
+        model = ContentReport
+        fields = ('reason', 'details')
+        labels = {
+            'reason': 'Why are you reporting this?',
+            'details': 'Additional details (optional)',
+        }
+        widgets = {
+            'details': forms.Textarea(
+                attrs={
+                    'rows': 4,
+                    'placeholder': 'Share any context that may help moderators review this report.',
+                }
+            ),
         }

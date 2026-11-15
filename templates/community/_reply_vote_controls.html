@@ -1,0 +1,20 @@
+<div class="vote-controls reply-vote-controls" aria-label="Reply votes">
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'community:reply_vote' reply.pk %}">
+            {% csrf_token %}
+            <button class="vote-button{% if reply.user_vote == 'up' %} is-selected{% endif %}" type="submit" name="value" value="up" aria-label="Upvote this reply" aria-pressed="{% if reply.user_vote == 'up' %}true{% else %}false{% endif %}">
+                <span aria-hidden="true">▲</span> {{ reply.upvote_count }}
+            </button>
+        </form>
+        <form method="post" action="{% url 'community:reply_vote' reply.pk %}">
+            {% csrf_token %}
+            <button class="vote-button{% if reply.user_vote == 'down' %} is-selected{% endif %}" type="submit" name="value" value="down" aria-label="Downvote this reply" aria-pressed="{% if reply.user_vote == 'down' %}true{% else %}false{% endif %}">
+                <span aria-hidden="true">▼</span> {{ reply.downvote_count }}
+            </button>
+        </form>
+    {% else %}
+        <span class="vote-total"><span aria-hidden="true">▲</span> {{ reply.upvote_count }} <span class="visually-hidden">upvotes</span></span>
+        <span class="vote-total"><span aria-hidden="true">▼</span> {{ reply.downvote_count }} <span class="visually-hidden">downvotes</span></span>
+        <a class="vote-login" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Log in to vote</a>
+    {% endif %}
+</div>

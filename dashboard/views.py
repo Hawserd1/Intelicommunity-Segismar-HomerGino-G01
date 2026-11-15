@@ -1,14 +1,16 @@
 from functools import wraps
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseNotFound
-from django.shortcuts import redirect, render
-from django.urls import reverse
 from django.db.models import Count
+from django.http import HttpResponseBadRequest, HttpResponseNotAllowed, HttpResponseNotFound
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import CustomUser
-from community.models import Discussion
+from community.models import CommunitySection, ContentReport, Discussion, Reply
 
 
 ROLE_DASHBOARDS = {
@@ -34,9 +36,9 @@ DASHBOARD_CONTENT = {
         'heading': 'Keep the conversation thoughtful.',
         'intro': 'A clear view of community reports and the tools moderators will use to review them.',
         'cards': (
-            ('reports', 'Reported content', 'Review community reports and decide what needs attention.', 'Coming soon'),
+            ('reports', 'Reported content', 'Review community reports and decide what needs attention.', 'Review'),
             ('discussions', 'Community discussions', 'Browse conversations that may need moderator support.', 'Browse'),
-            ('activity-reports', 'Activity overview', 'See moderation and community activity summaries.', 'Coming soon'),
+            ('activity-reports', 'Activity overview', 'See moderation and community activity summaries.', 'View reports'),
         ),
     },
     CustomUser.Role.ADMINISTRATOR: {
@@ -45,7 +47,7 @@ DASHBOARD_CONTENT = {
         'intro': 'Manage platform access and get ready to oversee the growing Intelicommunity.',
         'cards': (
             ('user-management', 'User management', 'Review accounts and assign application roles.', 'Open Django admin'),
-            ('activity-reports', 'Platform reports', 'Summaries for discussions, sections, and reports.', 'Coming soon'),
+            ('activity-reports', 'Platform reports', 'Summaries for discussions, sections, and reports.', 'View reports'),
             ('platform-settings', 'Platform settings', 'A home for future community-wide settings.', 'Coming soon'),
         ),
     },
@@ -54,8 +56,6 @@ DASHBOARD_CONTENT = {
 COMING_SOON_FEATURES = {
     'bookmarks': 'Saved Discussions',
     'notifications': 'Notifications',
-    'reports': 'Content Reports',
-    'activity-reports': 'Activity Reports',
     'platform-settings': 'Platform Settings',
 }
 
@@ -136,3 +136,116 @@ def user_management(request):
     if request.user.role != CustomUser.Role.ADMINISTRATOR or not request.user.is_staff:
         raise PermissionDenied
     return redirect(reverse('admin:accounts_customuser_changelist'))
+
+
+def _can_view_moderation_reports(user):
+    return user.role in (
+        CustomUser.Role.MODERATOR,
+        CustomUser.Role.ADMINISTRATOR,
+    )
+
+
+@login_required
+def reported_content(request):
+    if not _can_view_moderation_reports(request.user):
+        raise PermissionDenied
+
+    selected_status = request.GET.get('status', ContentReport.Status.PENDING)
+    if selected_status not in ContentReport.Status.values and selected_status != 'all':
+        selected_status = ContentReport.Status.PENDING
+
+    reports = ContentReport.objects.select_related(
+        'reported_by',
+        'reviewed_by',
+        'discussion__section',
+        'discussion__author',
+        'reply__discussion__section',
+        'reply__discussion__author',
+        'reply__author',
+    )
+    if selected_status != 'all':
+        reports = reports.filter(status=selected_status)
+
+    return render(
+        request,
+        'dashboard/reported_content.html',
+        {
+            'reports': reports,
+            'selected_status': selected_status,
+            'statuses': ContentReport.Status.choices,
+            'pending_count': ContentReport.objects.filter(
+                status=ContentReport.Status.PENDING
+            ).count(),
+        },
+    )
+
+
+@login_required
+def review_report(request, pk):
+    if not _can_view_moderation_reports(request.user):
+        raise PermissionDenied
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    status = request.POST.get('status')
+    if status not in (ContentReport.Status.REVIEWED, ContentReport.Status.DISMISSED):
+        return HttpResponseBadRequest('Choose reviewed or dismissed.')
+
+    report = get_object_or_404(ContentReport, pk=pk)
+    report.status = status
+    report.reviewed_by = request.user
+    report.reviewed_at = timezone.now()
+    report.save(update_fields=('status', 'reviewed_by', 'reviewed_at'))
+    messages.success(request, 'The report status was updated.')
+    return redirect('dashboard:reported_content')
+
+
+@login_required
+def activity_reports(request):
+    if not _can_view_moderation_reports(request.user):
+        raise PermissionDenied
+
+    reported_users = {}
+    discussion_author_counts = (
+        Discussion.objects.filter(content_reports__isnull=False)
+        .values('author_id', 'author__username')
+        .annotate(report_count=Count('content_reports'))
+    )
+    reply_author_counts = (
+        Reply.objects.filter(content_reports__isnull=False)
+        .values('author_id', 'author__username')
+        .annotate(report_count=Count('content_reports'))
+    )
+    for row in (*discussion_author_counts, *reply_author_counts):
+        user_count = reported_users.setdefault(
+            row['author_id'],
+            {'username': row['author__username'], 'report_count': 0},
+        )
+        user_count['report_count'] += row['report_count']
+
+    most_reported_users = sorted(
+        reported_users.values(),
+        key=lambda item: (-item['report_count'], item['username'].casefold()),
+    )[:10]
+    section_discussions = CommunitySection.objects.annotate(
+        discussion_count=Count('discussions', distinct=True),
+    ).order_by('-discussion_count', 'name')
+
+    return render(
+        request,
+        'dashboard/activity_reports.html',
+        {
+            'total_reports': ContentReport.objects.count(),
+            'pending_count': ContentReport.objects.filter(
+                status=ContentReport.Status.PENDING
+            ).count(),
+            'reviewed_count': ContentReport.objects.filter(
+                status=ContentReport.Status.REVIEWED
+            ).count(),
+            'dismissed_count': ContentReport.objects.filter(
+                status=ContentReport.Status.DISMISSED
+            ).count(),
+            'most_reported_users': most_reported_users,
+            'section_discussions': section_discussions,
+        },
+    )

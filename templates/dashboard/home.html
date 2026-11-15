@@ -97,6 +97,16 @@
                                     <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
                                     <span class="coming-label">Staff only</span>
                                 </div>
+                            {% elif slug == 'reports' %}
+                                <a class="feature-link" href="{% url 'dashboard:reported_content' %}">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="feature-arrow" aria-hidden="true">↗</span>
+                                </a>
+                            {% elif slug == 'activity-reports' %}
+                                <a class="feature-link" href="{% url 'dashboard:activity_reports' %}">
+                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
+                                    <span class="feature-arrow" aria-hidden="true">↗</span>
+                                </a>
                             {% else %}
                                 <a class="feature-link" href="{% url 'dashboard:coming_soon' slug %}">
                                     <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
