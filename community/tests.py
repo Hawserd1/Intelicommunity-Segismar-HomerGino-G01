@@ -54,11 +54,170 @@ class CommunityFeatureTests(TestCase):
                 name__in=('Programming', 'Engineering', 'Cooking', 'Music', 'Language')
             ).values_list('name', flat=True)
         )
-
         self.assertEqual(
             names,
             {'Programming', 'Engineering', 'Cooking', 'Music', 'Language'},
         )
+
+    def test_section_directory_searches_name_and_description_and_sorts_popular(self):
+        cooking = CommunitySection.objects.create(
+            name='Searchable Cooking',
+            description='Traditional recipe collection.',
+        )
+        engineering = CommunitySection.objects.create(
+            name='Searchable Engineering',
+            description='Popular engineering topics.',
+        )
+        engineering.followers.add(self.member, self.other_member)
+
+        search_response = self.client.get(
+            reverse('community:section_list'),
+            {'q': 'recipe'},
+        )
+        self.assertContains(search_response, cooking.name)
+        self.assertNotContains(search_response, engineering.name)
+
+        popular_response = self.client.get(
+            reverse('community:section_list'),
+            {'sort': 'popular'},
+        )
+        listed_sections = list(popular_response.context['sections'])
+        self.assertEqual(listed_sections[0], engineering)
+
+    def test_discussion_search_filters_by_keyword_section_and_tag(self):
+        python_tag = Tag.objects.create(name='python-search')
+        django_tag = Tag.objects.create(name='django-search')
+        second_section = CommunitySection.objects.create(
+            name='Search Testing',
+            description='Search filter tests.',
+        )
+        matching = Discussion.objects.create(
+            section=second_section,
+            author=self.other_member,
+            title='A searchable post about Python',
+            body='Detailed content.',
+        )
+        matching.tags.add(python_tag)
+        other = Discussion.objects.create(
+            section=self.section,
+            author=self.other_member,
+            title='Another searchable post',
+            body='Different topic.',
+        )
+        other.tags.add(django_tag)
+
+        response = self.client.get(
+            reverse('community:discussion_list'),
+            {
+                'q': 'searchable',
+                'section': second_section.pk,
+                'tag': python_tag.pk,
+            },
+        )
+
+        self.assertContains(response, matching.title)
+        self.assertNotContains(response, other.title)
+
+    def test_discussion_sort_supports_oldest_newest_and_most_discussed(self):
+        older = Discussion.objects.create(
+            section=self.section,
+            author=self.member,
+            title='Ordering first',
+            body='Older discussion.',
+        )
+        newer = Discussion.objects.create(
+            section=self.section,
+            author=self.member,
+            title='Ordering second',
+            body='Newer discussion.',
+        )
+        Reply.objects.create(
+            discussion=older,
+            author=self.other_member,
+            body='First reply.',
+        )
+        Reply.objects.create(
+            discussion=older,
+            author=self.other_member,
+            body='Second reply.',
+        )
+
+        def result_ids(sort):
+            response = self.client.get(
+                reverse('community:discussion_list'),
+                {'sort': sort},
+            )
+            return list(response.context['discussions'].values_list('pk', flat=True))
+
+        self.assertLess(
+            result_ids('oldest').index(older.pk),
+            result_ids('oldest').index(newer.pk),
+        )
+        self.assertLess(
+            result_ids('newest').index(newer.pk),
+            result_ids('newest').index(older.pk),
+        )
+        self.assertLess(
+            result_ids('discussed').index(older.pk),
+            result_ids('discussed').index(newer.pk),
+        )
+
+    def test_section_discussions_can_be_searched_and_filtered_by_tag(self):
+        tag = Tag.objects.create(name='section-filter-tag')
+        matching = Discussion.objects.create(
+            section=self.section,
+            author=self.member,
+            title='Section filter match',
+            body='Search text in this section.',
+        )
+        matching.tags.add(tag)
+        other_section = CommunitySection.objects.create(
+            name='Section filter other',
+            description='Another section.',
+        )
+        Discussion.objects.create(
+            section=other_section,
+            author=self.member,
+            title='Section filter unrelated',
+            body='Search text outside this section.',
+        )
+
+        response = self.client.get(
+            self.section.get_absolute_url(),
+            {'q': 'search text', 'tag': tag.pk},
+        )
+
+        self.assertContains(response, matching.title)
+        self.assertNotContains(response, 'Section filter unrelated')
+
+    def test_tag_page_can_filter_by_keyword_and_section(self):
+        tag = Tag.objects.create(name='tag-filter-test')
+        matching = Discussion.objects.create(
+            section=self.section,
+            author=self.member,
+            title='Unique tagged query result',
+            body='Searchable tagged discussion.',
+        )
+        matching.tags.add(tag)
+        other_section = CommunitySection.objects.create(
+            name='Tag filter section',
+            description='Another section for the tag page.',
+        )
+        excluded = Discussion.objects.create(
+            section=other_section,
+            author=self.other_member,
+            title='Unique tagged query excluded',
+            body='Another tagged discussion.',
+        )
+        excluded.tags.add(tag)
+
+        response = self.client.get(
+            reverse('community:tag_detail', args=(tag.pk,)),
+            {'q': 'unique', 'section': self.section.pk},
+        )
+
+        self.assertContains(response, matching.title)
+        self.assertNotContains(response, excluded.title)
 
     def test_section_page_lists_its_discussions_and_post_link(self):
         self.client.force_login(self.member)

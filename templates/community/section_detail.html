@@ -34,6 +34,33 @@
             <h2>Discussions</h2>
             <a href="{% url 'community:discussion_list' %}">Browse all discussions</a>
         </div>
+        <form class="filter-form filter-form-wrap" method="get">
+            <label class="filter-search">
+                <span class="visually-hidden">Search discussions in {{ section.name }}</span>
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search this community's discussions">
+            </label>
+            <label>
+                <span class="visually-hidden">Filter by tag</span>
+                <select name="tag">
+                    <option value="">All tags</option>
+                    {% for tag in tags %}
+                        <option value="{{ tag.pk }}" {% if selected_tag == tag.pk|stringformat:"s" %}selected{% endif %}>#{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Sort discussions</span>
+                <select name="sort">
+                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                    <option value="discussed" {% if selected_sort == 'discussed' %}selected{% endif %}>Most discussed</option>
+                </select>
+            </label>
+            <button class="button button-outline" type="submit">Apply filters</button>
+            {% if search_query or selected_tag or selected_sort != 'newest' %}
+                <a class="filter-reset" href="{{ section.get_absolute_url }}">Clear</a>
+            {% endif %}
+        </form>
         {% if discussions %}
             <ul class="discussion-list">
                 {% for discussion in discussions %}
@@ -57,10 +84,15 @@
             </ul>
         {% else %}
             <div class="empty-state">
-                <h2>No discussions here yet.</h2>
-                <p>Be the first to ask a question or share something useful.</p>
-                {% if user.is_authenticated %}
-                    <a class="button" href="{% url 'community:section_discussion_create' section.slug %}">Start a discussion</a>
+                {% if search_query or selected_tag %}
+                    <h2>No discussions match those filters.</h2>
+                    <p>Try another keyword or clear the selected filters.</p>
+                {% else %}
+                    <h2>No discussions here yet.</h2>
+                    <p>Be the first to ask a question or share something useful.</p>
+                    {% if user.is_authenticated %}
+                        <a class="button" href="{% url 'community:section_discussion_create' section.slug %}">Start a discussion</a>
+                    {% endif %}
                 {% endif %}
             </div>
         {% endif %}
