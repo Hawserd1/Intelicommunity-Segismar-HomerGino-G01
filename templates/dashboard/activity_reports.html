@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Activity reports | Intelicommunity{% endblock %}
+
+{% block content %}
+    <div class="content-heading content-heading-actions">
+        <div>
+            <p class="eyebrow">PLATFORM ACTIVITY</p>
+            <h1>Activity summaries</h1>
+            <p>Stored report and discussion activity across community sections.</p>
+        </div>
+        <a class="button button-outline" href="{% url 'dashboard:reported_content' %}">Review reports</a>
+    </div>
+
+    <div class="report-summary-grid">
+        <section class="report-summary-card">
+            <span>Total reports</span>
+            <strong>{{ total_reports }}</strong>
+        </section>
+        <section class="report-summary-card">
+            <span>Pending review</span>
+            <strong>{{ pending_count }}</strong>
+        </section>
+        <section class="report-summary-card">
+            <span>Reviewed</span>
+            <strong>{{ reviewed_count }}</strong>
+        </section>
+        <section class="report-summary-card">
+            <span>Dismissed</span>
+            <strong>{{ dismissed_count }}</strong>
+        </section>
+    </div>
+
+    <div class="report-summary-columns">
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Most-reported users</h2>
+                <span>By reports on their discussions and replies</span>
+            </div>
+            <ol class="summary-list">
+                {% for reported_user in most_reported_users %}
+                    <li>
+                        <strong>{{ reported_user.username }}</strong>
+                        <span>{{ reported_user.report_count }} report{{ reported_user.report_count|pluralize }}</span>
+                    </li>
+                {% empty %}
+                    <li class="summary-empty">No content has been reported.</li>
+                {% endfor %}
+            </ol>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Discussions by community section</h2>
+                <span>{{ section_discussions|length }} section{{ section_discussions|length|pluralize }}</span>
+            </div>
+            <ul class="summary-list">
+                {% for section in section_discussions %}
+                    <li>
+                        <a href="{{ section.get_absolute_url }}">{{ section.name }}</a>
+                        <span>{{ section.discussion_count }} discussion{{ section.discussion_count|pluralize }}</span>
+                    </li>
+                {% empty %}
+                    <li class="summary-empty">No community sections are available.</li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Edit reply | Intelicommunity{% endblock %}
+
+{% block content %}
+    <section class="form-panel">
+        <p class="eyebrow">DISCUSSION REPLY</p>
+        <h1>Edit your reply</h1>
+        <p class="form-intro">Correct or clarify what you shared in <a href="{{ object.discussion.get_absolute_url }}">{{ object.discussion.title }}</a>.</p>
+        <form class="account-form" method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="button-row button-row-left">
+                <button class="button" type="submit">Save changes</button>
+                <a class="button button-outline" href="{{ object.discussion.get_absolute_url }}#reply-{{ object.pk }}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .forms import DiscussionForm
-from .models import CommunitySection, Discussion, Reply, Tag, Vote
+from .models import CommunitySection, ContentReport, Discussion, Reply, Tag, Vote
 
 User = get_user_model()
 
@@ -318,6 +318,111 @@ class CommunityFeatureTests(TestCase):
             f'{reverse("accounts:login")}?next={reply_url}',
         )
 
+    def test_reply_author_can_edit_their_reply_but_other_users_cannot(self):
+        reply = Reply.objects.create(
+            discussion=self.discussion,
+            author=self.other_member,
+            body='Original reply with a typo.',
+        )
+        edit_url = reverse('community:reply_update', args=(reply.pk,))
+
+        response = self.client.get(edit_url)
+        self.assertRedirects(
+            response,
+            f'{reverse("accounts:login")}?next={edit_url}',
+        )
+
+        self.client.force_login(self.member)
+        self.assertEqual(self.client.get(edit_url).status_code, 403)
+
+        self.client.force_login(self.other_member)
+        self.assertContains(self.client.get(edit_url), 'Original reply with a typo.')
+        response = self.client.post(
+            edit_url,
+            {'body': 'Corrected and clarified reply.'},
+        )
+
+        self.assertRedirects(
+            response,
+            f'{self.discussion.get_absolute_url()}#reply-{reply.pk}',
+        )
+        reply.refresh_from_db()
+        self.assertEqual(reply.body, 'Corrected and clarified reply.')
+
+    def test_members_can_report_discussions_and_replies_only_once(self):
+        reply = Reply.objects.create(
+            discussion=self.discussion,
+            author=self.member,
+            body='Reply that can be reported.',
+        )
+        self.client.force_login(self.other_member)
+        discussion_report_url = reverse(
+            'community:discussion_report',
+            args=(self.discussion.pk,),
+        )
+        reply_report_url = reverse('community:reply_report', args=(reply.pk,))
+        report_data = {
+            'reason': ContentReport.Reason.SPAM,
+            'details': 'This appears to be spam.',
+        }
+
+        invalid_response = self.client.post(
+            discussion_report_url,
+            {'reason': 'not-a-valid-reason'},
+        )
+        self.assertEqual(invalid_response.status_code, 400)
+        self.assertFalse(ContentReport.objects.exists())
+
+        response = self.client.post(discussion_report_url, report_data)
+        self.assertRedirects(response, self.discussion.get_absolute_url())
+        response = self.client.post(reply_report_url, report_data)
+        self.assertRedirects(
+            response,
+            f'{self.discussion.get_absolute_url()}#reply-{reply.pk}',
+        )
+        self.assertEqual(
+            ContentReport.objects.filter(reported_by=self.other_member).count(),
+            2,
+        )
+
+        self.client.post(discussion_report_url, report_data)
+        self.assertEqual(
+            ContentReport.objects.filter(
+                reported_by=self.other_member,
+                discussion=self.discussion,
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            ContentReport.objects.get(
+                reported_by=self.other_member,
+                discussion=self.discussion,
+            ).status,
+            ContentReport.Status.PENDING,
+        )
+
+    def test_members_cannot_report_their_own_content_and_reports_require_login(self):
+        reply = Reply.objects.create(
+            discussion=self.discussion,
+            author=self.member,
+            body='My own reply.',
+        )
+        discussion_report_url = reverse(
+            'community:discussion_report',
+            args=(self.discussion.pk,),
+        )
+        reply_report_url = reverse('community:reply_report', args=(reply.pk,))
+        response = self.client.get(discussion_report_url)
+        self.assertRedirects(
+            response,
+            f'{reverse("accounts:login")}?next={discussion_report_url}',
+        )
+
+        self.client.force_login(self.member)
+        self.assertEqual(self.client.get(discussion_report_url).status_code, 403)
+        self.assertEqual(self.client.get(reply_report_url).status_code, 403)
+        self.assertEqual(ContentReport.objects.count(), 0)
+
     def test_members_can_add_remove_and_change_discussion_votes(self):
         self.client.force_login(self.other_member)
         vote_url = reverse('community:discussion_vote', args=(self.discussion.pk,))
@@ -345,6 +450,80 @@ class CommunityFeatureTests(TestCase):
         self.assertFalse(
             Vote.objects.filter(discussion=self.discussion, user=self.other_member).exists()
         )
+
+    def test_members_can_vote_on_each_reply_independently_of_the_discussion(self):
+        reply = Reply.objects.create(
+            discussion=self.discussion,
+            author=self.member,
+            body='An assertion that can be voted on.',
+        )
+        self.client.force_login(self.other_member)
+        discussion_vote_url = reverse(
+            'community:discussion_vote',
+            args=(self.discussion.pk,),
+        )
+        reply_vote_url = reverse('community:reply_vote', args=(reply.pk,))
+
+        self.client.post(discussion_vote_url, {'value': Vote.Value.UP})
+        response = self.client.post(reply_vote_url, {'value': Vote.Value.UP})
+        self.assertRedirects(
+            response,
+            f'{self.discussion.get_absolute_url()}#reply-{reply.pk}',
+        )
+        self.assertEqual(
+            Vote.objects.get(reply=reply, user=self.other_member).value,
+            Vote.Value.UP,
+        )
+        self.assertEqual(
+            Vote.objects.filter(
+                discussion=self.discussion,
+                reply__isnull=True,
+                user=self.other_member,
+            ).count(),
+            1,
+        )
+
+        detail_response = self.client.get(self.discussion.get_absolute_url())
+        self.assertContains(
+            detail_response,
+            'aria-label="Upvote this reply" aria-pressed="true"',
+        )
+        self.assertContains(detail_response, '▲</span> 1')
+
+        self.client.post(reply_vote_url, {'value': Vote.Value.DOWN})
+        self.assertEqual(
+            Vote.objects.get(reply=reply, user=self.other_member).value,
+            Vote.Value.DOWN,
+        )
+        self.client.post(reply_vote_url, {'value': Vote.Value.DOWN})
+        self.assertFalse(
+            Vote.objects.filter(reply=reply, user=self.other_member).exists()
+        )
+        self.assertTrue(
+            Vote.objects.filter(
+                discussion=self.discussion,
+                user=self.other_member,
+            ).exists()
+        )
+
+    def test_reply_votes_require_login_and_valid_post(self):
+        reply = Reply.objects.create(
+            discussion=self.discussion,
+            author=self.member,
+            body='A reply for vote authorization checks.',
+        )
+        vote_url = reverse('community:reply_vote', args=(reply.pk,))
+        response = self.client.post(vote_url, {'value': Vote.Value.UP})
+        self.assertRedirects(
+            response,
+            f'{reverse("accounts:login")}?next={vote_url}',
+        )
+
+        self.client.force_login(self.other_member)
+        self.assertEqual(self.client.get(vote_url).status_code, 405)
+        response = self.client.post(vote_url, {'value': 'neutral'})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Vote.objects.filter(reply=reply).exists())
 
     def test_discussion_votes_require_login_and_post_with_a_valid_choice(self):
         vote_url = reverse('community:discussion_vote', args=(self.discussion.pk,))

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Report content | Intelicommunity{% endblock %}
+
+{% block content %}
+    <section class="form-panel">
+        <p class="eyebrow">COMMUNITY MODERATION</p>
+        <h1>Report content</h1>
+        {% if reply %}
+            <div class="report-target">
+                <p>Reply by <strong>{{ reply.author.username }}</strong> in <a href="{{ discussion.get_absolute_url }}">{{ discussion.title }}</a></p>
+                <blockquote>{{ reply.body|linebreaks }}</blockquote>
+            </div>
+        {% else %}
+            <div class="report-target">
+                <p>Discussion by <strong>{{ discussion.author.username }}</strong> in {{ discussion.section.name }}</p>
+                <h2>{{ discussion.title }}</h2>
+                <blockquote>{{ discussion.body|truncatewords:60 }}</blockquote>
+            </div>
+        {% endif %}
+        <p class="form-intro">Reports are reviewed by community moderators. Please select the closest reason and include any helpful context.</p>
+        <form class="account-form" method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="button-row button-row-left">
+                <button class="button" type="submit">Send report</button>
+                {% if reply %}
+                    <a class="button button-outline" href="{{ discussion.get_absolute_url }}#reply-{{ reply.pk }}">Cancel</a>
+                {% else %}
+                    <a class="button button-outline" href="{{ discussion.get_absolute_url }}">Cancel</a>
+                {% endif %}
+            </div>
+        </form>
+    </section>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Reported content | Intelicommunity{% endblock %}
+
+{% block content %}
+    <div class="content-heading content-heading-actions">
+        <div>
+            <p class="eyebrow">MODERATION DESK</p>
+            <h1>Reported content</h1>
+            <p>{{ pending_count }} report{{ pending_count|pluralize }} pending review.</p>
+        </div>
+        <a class="button button-outline" href="{% url 'dashboard:activity_reports' %}">Activity summaries</a>
+    </div>
+
+    <section class="panel">
+        <div class="panel-heading">
+            <h2>Reports</h2>
+            <span>{{ reports|length }} result{{ reports|length|pluralize }}</span>
+        </div>
+        <form class="filter-form" method="get">
+            <label>
+                <span class="visually-hidden">Filter reports by status</span>
+                <select name="status">
+                    <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending review</option>
+                    <option value="reviewed" {% if selected_status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                    <option value="dismissed" {% if selected_status == 'dismissed' %}selected{% endif %}>Dismissed</option>
+                    <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All reports</option>
+                </select>
+            </label>
+            <button class="button button-outline" type="submit">Apply</button>
+        </form>
+        {% for report in reports %}
+            <article class="moderation-report">
+                <div class="moderation-report-heading">
+                    <div>
+                        <span class="report-status report-status-{{ report.status }}">{{ report.get_status_display }}</span>
+                        <strong>{{ report.get_reason_display }}</strong>
+                        <small>Reported by {{ report.reported_by.username }} · {{ report.created_at|date:"M j, Y, g:i a" }}</small>
+                    </div>
+                    {% if report.discussion %}
+                        <a class="button button-outline button-small" href="{{ report.discussion.get_absolute_url }}">Open discussion</a>
+                    {% else %}
+                        <a class="button button-outline button-small" href="{{ report.reply.discussion.get_absolute_url }}#reply-{{ report.reply.pk }}">Open reply</a>
+                    {% endif %}
+                </div>
+                <div class="report-target">
+                    {% if report.discussion %}
+                        <p>Discussion by <strong>{{ report.discussion.author.username }}</strong> in {{ report.discussion.section.name }}</p>
+                        <blockquote>{{ report.discussion.title }} — {{ report.discussion.body|truncatewords:36 }}</blockquote>
+                    {% else %}
+                        <p>Reply by <strong>{{ report.reply.author.username }}</strong> in <a href="{{ report.reply.discussion.get_absolute_url }}">{{ report.reply.discussion.title }}</a></p>
+                        <blockquote>{{ report.reply.body|truncatewords:36 }}</blockquote>
+                    {% endif %}
+                    {% if report.details %}
+                        <p><strong>Reporter details:</strong> {{ report.details|linebreaksbr }}</p>
+                    {% endif %}
+                </div>
+                {% if report.status == 'pending' %}
+                    <div class="inline-actions">
+                        <form method="post" action="{% url 'dashboard:review_report' report.pk %}">
+                            {% csrf_token %}
+                            <button class="button button-small" type="submit" name="status" value="reviewed">Mark reviewed</button>
+                        </form>
+                        <form method="post" action="{% url 'dashboard:review_report' report.pk %}">
+                            {% csrf_token %}
+                            <button class="button button-danger button-small" type="submit" name="status" value="dismissed">Dismiss</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="report-review-note">Updated by {{ report.reviewed_by.username|default:"a moderator" }}{% if report.reviewed_at %} · {{ report.reviewed_at|date:"M j, Y, g:i a" }}{% endif %}</p>
+                {% endif %}
+            </article>
+        {% empty %}
+            <div class="empty-state">
+                <h2>No reports in this view.</h2>
+                <p>Try selecting another report status.</p>
+            </div>
+        {% endfor %}
+    </section>
+{% endblock %}

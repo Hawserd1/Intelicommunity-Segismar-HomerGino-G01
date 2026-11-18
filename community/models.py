@@ -97,6 +97,15 @@ class Vote(models.Model):
         Discussion,
         on_delete=models.CASCADE,
         related_name='votes',
+        null=True,
+        blank=True,
+    )
+    reply = models.ForeignKey(
+        Reply,
+        on_delete=models.CASCADE,
+        related_name='votes',
+        null=True,
+        blank=True,
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -111,7 +120,20 @@ class Vote(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('discussion', 'user'),
-                name='unique_vote_per_user_discussion',
+                condition=models.Q(discussion__isnull=False),
+                name='unique_user_discussion_vote',
+            ),
+            models.UniqueConstraint(
+                fields=('reply', 'user'),
+                condition=models.Q(reply__isnull=False),
+                name='unique_user_reply_vote',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(discussion__isnull=False, reply__isnull=True)
+                    | models.Q(discussion__isnull=True, reply__isnull=False)
+                ),
+                name='vote_has_one_target',
             ),
             models.CheckConstraint(
                 condition=models.Q(value__in=('up', 'down')),
@@ -120,4 +142,80 @@ class Vote(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.get_value_display()} by {self.user} on {self.discussion}'
+        target = self.discussion or self.reply
+        return f'{self.get_value_display()} by {self.user} on {target}'
+
+
+class ContentReport(models.Model):
+    class Reason(models.TextChoices):
+        SPAM = 'spam', 'Spam'
+        HARASSMENT = 'harassment', 'Harassment or abuse'
+        MISINFORMATION = 'misinformation', 'Misleading information'
+        OTHER = 'other', 'Other'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending review'
+        REVIEWED = 'reviewed', 'Reviewed'
+        DISMISSED = 'dismissed', 'Dismissed'
+
+    reported_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='content_reports',
+    )
+    discussion = models.ForeignKey(
+        Discussion,
+        on_delete=models.CASCADE,
+        related_name='content_reports',
+        null=True,
+        blank=True,
+    )
+    reply = models.ForeignKey(
+        Reply,
+        on_delete=models.CASCADE,
+        related_name='content_reports',
+        null=True,
+        blank=True,
+    )
+    reason = models.CharField(max_length=20, choices=Reason.choices)
+    details = models.TextField(blank=True, max_length=1000)
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='reviewed_content_reports',
+        null=True,
+        blank=True,
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(discussion__isnull=False, reply__isnull=True)
+                    | models.Q(discussion__isnull=True, reply__isnull=False)
+                ),
+                name='content_report_has_one_target',
+            ),
+            models.UniqueConstraint(
+                fields=('reported_by', 'discussion'),
+                condition=models.Q(discussion__isnull=False),
+                name='unique_reporter_discussion_report',
+            ),
+            models.UniqueConstraint(
+                fields=('reported_by', 'reply'),
+                condition=models.Q(reply__isnull=False),
+                name='unique_reporter_reply_report',
+            ),
+        ]
+
+    def __str__(self):
+        target = self.discussion or self.reply
+        return f'Report by {self.reported_by} on {target}'

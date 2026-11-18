@@ -17,6 +17,9 @@
                     <a class="button button-danger" href="{% url 'community:discussion_delete' discussion.pk %}">Delete</a>
                 </div>
             {% endif %}
+            {% if user.is_authenticated and user != discussion.author %}
+                <a class="report-link" href="{% url 'community:discussion_report' discussion.pk %}">Report discussion</a>
+            {% endif %}
         </div>
         <div class="discussion-body">{{ discussion.body|linebreaks }}</div>
         {% include "community/_vote_controls.html" %}
@@ -35,11 +38,19 @@
             <span>{{ discussion.replies.count }}</span>
         </div>
         {% for reply in discussion.replies.all %}
-            <article class="reply-row">
+            <article class="reply-row" id="reply-{{ reply.pk }}">
                 <div class="reply-avatar" aria-hidden="true">{{ reply.author.username|first|upper }}</div>
                 <div class="reply-copy">
                     <p class="reply-byline"><strong>{{ reply.author.username }}</strong> replied {{ reply.created_at|date:"M j, Y, g:i a" }}</p>
                     <div>{{ reply.body|linebreaks }}</div>
+                    {% include "community/_reply_vote_controls.html" %}
+                </div>
+                <div class="reply-actions">
+                    {% if user == reply.author %}
+                        <a class="report-link" href="{% url 'community:reply_update' reply.pk %}">Edit</a>
+                    {% elif user.is_authenticated %}
+                        <a class="report-link" href="{% url 'community:reply_report' reply.pk %}">Report</a>
+                    {% endif %}
                 </div>
             </article>
         {% empty %}
