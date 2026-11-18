@@ -6,9 +6,9 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count
 from django.http import HttpResponseBadRequest, HttpResponseNotAllowed, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 
+from .forms import UserRoleForm
 from accounts.models import CustomUser
 from community.models import CommunitySection, ContentReport, Discussion, Reply
 
@@ -46,7 +46,7 @@ DASHBOARD_CONTENT = {
         'heading': 'The community, at a glance.',
         'intro': 'Manage platform access and get ready to oversee the growing Intelicommunity.',
         'cards': (
-            ('user-management', 'User management', 'Review accounts and assign application roles.', 'Open Django admin'),
+            ('user-management', 'User management', 'Review accounts and assign application roles.', 'Manage roles'),
             ('activity-reports', 'Platform reports', 'Summaries for discussions, sections, and reports.', 'View reports'),
             ('platform-settings', 'Platform settings', 'A home for future community-wide settings.', 'Coming soon'),
         ),
@@ -86,16 +86,39 @@ def _render_dashboard(request, role):
     context = {
         **DASHBOARD_CONTENT[role],
         'role_label': request.user.get_role_display(),
-    }
-    if role == CustomUser.Role.STANDARD_USER:
-        context['followed_sections'] = request.user.followed_sections.annotate(
+        'followed_sections': request.user.followed_sections.annotate(
             discussion_count=Count('discussions', distinct=True)
-        )
-        context['followed_discussions'] = (
+        ),
+        'followed_discussions': (
             Discussion.objects.filter(section__followers=request.user)
             .select_related('section', 'author')
             .annotate(reply_count=Count('replies', distinct=True))[:5]
+        ),
+    }
+    if role == CustomUser.Role.MODERATOR:
+        context['pending_reports'] = ContentReport.objects.filter(
+            status=ContentReport.Status.PENDING
+        ).select_related(
+            'discussion',
+            'discussion__section',
+            'reply__discussion',
+            'reply__discussion__section',
+        )[:5]
+        context['pending_report_count'] = ContentReport.objects.filter(
+            status=ContentReport.Status.PENDING
+        ).count()
+    elif role == CustomUser.Role.ADMINISTRATOR:
+        role_counts = CustomUser.objects.values('role').annotate(total=Count('pk'))
+        context['user_counts_by_role'] = {
+            role_value: 0 for role_value, _label in CustomUser.Role.choices
+        }
+        context['user_counts_by_role'].update(
+            {row['role']: row['total'] for row in role_counts}
         )
+        context['total_users'] = CustomUser.objects.count()
+        context['total_discussions'] = Discussion.objects.count()
+        context['total_sections'] = CommunitySection.objects.count()
+        context['total_reports'] = ContentReport.objects.count()
     return render(
         request,
         'dashboard/home.html',
@@ -133,9 +156,54 @@ def coming_soon(request, feature):
 
 @login_required
 def user_management(request):
-    if request.user.role != CustomUser.Role.ADMINISTRATOR or not request.user.is_staff:
+    if request.user.role != CustomUser.Role.ADMINISTRATOR:
         raise PermissionDenied
-    return redirect(reverse('admin:accounts_customuser_changelist'))
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+
+    users = CustomUser.objects.exclude(pk=request.user.pk).order_by('username')
+    return render(
+        request,
+        'dashboard/user_management.html',
+        {'users': _users_with_role_forms(users)},
+    )
+
+
+def _users_with_role_forms(users, *, form=None, form_user_id=None):
+    for user in users:
+        user.role_form = (
+            form
+            if user.pk == form_user_id
+            else UserRoleForm(instance=user, auto_id=f'role_{user.pk}_%s')
+        )
+    return users
+
+
+@login_required
+def update_user_role(request, pk):
+    if request.user.role != CustomUser.Role.ADMINISTRATOR:
+        raise PermissionDenied
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    user = get_object_or_404(CustomUser.objects.exclude(pk=request.user.pk), pk=pk)
+    form = UserRoleForm(request.POST, instance=user, auto_id=f'role_{user.pk}_%s')
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"{user.username}'s role was updated.")
+        return redirect('dashboard:user_management')
+
+    users = _users_with_role_forms(
+        CustomUser.objects.exclude(pk=request.user.pk).order_by('username'),
+        form=form,
+        form_user_id=user.pk,
+    )
+    return render(
+        request,
+        'dashboard/user_management.html',
+        {'users': users},
+        status=400,
+    )
 
 
 def _can_view_moderation_reports(user):

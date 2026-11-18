@@ -93,6 +93,75 @@ class RoleDashboardTests(TestCase):
         self.assertNotContains(response, not_followed.name)
         self.assertNotContains(response, 'A discussion from a section I do not follow')
 
+    def test_moderator_and_administrator_dashboards_show_followed_communities(self):
+        section = CommunitySection.objects.create(
+            name='Role dashboard community',
+            description='A followed community for staff dashboards.',
+        )
+        discussion = Discussion.objects.create(
+            section=section,
+            author=self.make_user(User.Role.STANDARD_USER),
+            title='Recent followed community discussion',
+            body='This should appear on both staff dashboards.',
+        )
+
+        for role, dashboard_name in (
+            (User.Role.MODERATOR, 'dashboard:moderator'),
+            (User.Role.ADMINISTRATOR, 'dashboard:administrator'),
+        ):
+            with self.subTest(role=role):
+                user = self.make_user(role)
+                section.followers.add(user)
+                self.client.force_login(user)
+
+                response = self.client.get(reverse(dashboard_name))
+
+                self.assertContains(response, section.name)
+                self.assertContains(response, discussion.title)
+
+    def test_moderator_dashboard_shows_pending_report_snapshot(self):
+        moderator = self.make_user(User.Role.MODERATOR)
+        reporter = self.make_user(User.Role.STANDARD_USER)
+        section = CommunitySection.objects.create(
+            name='Moderation snapshot community',
+            description='Section for the moderator dashboard test.',
+        )
+        discussion = Discussion.objects.create(
+            section=section,
+            author=reporter,
+            title='Discussion awaiting moderation',
+            body='Reported content.',
+        )
+        ContentReport.objects.create(
+            reported_by=moderator,
+            discussion=discussion,
+            reason=ContentReport.Reason.SPAM,
+        )
+        self.client.force_login(moderator)
+
+        response = self.client.get(reverse('dashboard:moderator'))
+
+        self.assertContains(response, 'Moderation queue')
+        self.assertContains(response, '1 report pending review')
+        self.assertContains(response, discussion.title)
+        self.assertContains(response, reverse('dashboard:reported_content'))
+
+    def test_administrator_dashboard_shows_platform_snapshot(self):
+        administrator = self.make_user(User.Role.ADMINISTRATOR)
+        self.make_user(User.Role.STANDARD_USER)
+        self.make_user(User.Role.MODERATOR)
+        self.client.force_login(administrator)
+
+        response = self.client.get(reverse('dashboard:administrator'))
+
+        self.assertContains(response, 'Platform overview')
+        self.assertContains(response, 'Standard users')
+        self.assertContains(response, 'Moderators')
+        self.assertContains(response, 'Administrators')
+        self.assertEqual(response.context['user_counts_by_role'][User.Role.ADMINISTRATOR], 1)
+        self.assertEqual(response.context['user_counts_by_role'][User.Role.MODERATOR], 1)
+        self.assertEqual(response.context['user_counts_by_role'][User.Role.STANDARD_USER], 1)
+
     def test_standard_user_dashboard_shows_explore_prompt_when_no_sections_followed(self):
         self.client.force_login(self.make_user(User.Role.STANDARD_USER))
 
@@ -153,12 +222,78 @@ class RoleDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    def test_application_administrator_without_staff_access_cannot_use_user_management(self):
-        self.client.force_login(self.make_user(User.Role.ADMINISTRATOR))
+    def test_application_administrator_can_manage_roles_without_django_staff_access(self):
+        administrator = self.make_user(User.Role.ADMINISTRATOR)
+        member = self.make_user(User.Role.STANDARD_USER)
+        self.client.force_login(administrator)
 
         response = self.client.get(reverse('dashboard:user_management'))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, member.username)
+        self.assertContains(response, 'Standard User')
+        self.assertContains(response, 'Moderator')
+        self.assertContains(response, 'Administrator')
+
+        response = self.client.post(
+            reverse('dashboard:update_user_role', args=(member.pk,)),
+            {'role': User.Role.MODERATOR},
+        )
+
+        self.assertRedirects(response, reverse('dashboard:user_management'))
+        member.refresh_from_db()
+        self.assertEqual(member.role, User.Role.MODERATOR)
+        self.assertFalse(member.is_staff)
+
+    def test_non_administrators_cannot_view_or_change_user_roles(self):
+        target = self.make_user(User.Role.STANDARD_USER)
+        role_url = reverse('dashboard:update_user_role', args=(target.pk,))
+
+        for role in (User.Role.STANDARD_USER, User.Role.MODERATOR):
+            with self.subTest(role=role):
+                actor = User.objects.create_user(
+                    username=f'role-check-{role.lower()}',
+                    email=f'role-check-{role.lower()}@example.com',
+                    password='Safe-password-872!',
+                    role=role,
+                )
+                self.client.force_login(actor)
+                self.assertEqual(
+                    self.client.get(reverse('dashboard:user_management')).status_code,
+                    403,
+                )
+                self.assertEqual(
+                    self.client.post(
+                        role_url,
+                        {'role': User.Role.ADMINISTRATOR},
+                    ).status_code,
+                    403,
+                )
+
+        target.refresh_from_db()
+        self.assertEqual(target.role, User.Role.STANDARD_USER)
+
+    def test_administrator_cannot_change_their_own_role(self):
+        administrator = self.make_user(User.Role.ADMINISTRATOR)
+        self.client.force_login(administrator)
+        role_url = reverse('dashboard:update_user_role', args=(administrator.pk,))
+
+        self.assertEqual(self.client.post(role_url, {'role': User.Role.STANDARD_USER}).status_code, 404)
+        administrator.refresh_from_db()
+        self.assertEqual(administrator.role, User.Role.ADMINISTRATOR)
+
+    def test_role_assignment_requires_post_and_valid_role(self):
+        administrator = self.make_user(User.Role.ADMINISTRATOR)
+        member = self.make_user(User.Role.STANDARD_USER)
+        self.client.force_login(administrator)
+        role_url = reverse('dashboard:update_user_role', args=(member.pk,))
+
+        self.assertEqual(self.client.get(role_url).status_code, 405)
+        response = self.client.post(role_url, {'role': 'INVALID'})
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'Select a valid choice', status_code=400)
+        member.refresh_from_db()
+        self.assertEqual(member.role, User.Role.STANDARD_USER)
 
     def test_moderators_can_review_and_dismiss_content_reports(self):
         moderator = self.make_user(User.Role.MODERATOR)

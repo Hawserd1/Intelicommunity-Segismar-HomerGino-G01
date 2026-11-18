@@ -18,6 +18,50 @@
                 <h2>Your community</h2>
                 <span>Welcome, {{ user.first_name|default:user.username }}</span>
             </div>
+            {% if user.role == 'MODERATOR' %}
+                <section class="dashboard-role-panel" aria-labelledby="moderation-snapshot-heading">
+                    <div class="panel-heading">
+                        <div>
+                            <h3 id="moderation-snapshot-heading">Moderation queue</h3>
+                            <p>{{ pending_report_count }} report{{ pending_report_count|pluralize }} pending review</p>
+                        </div>
+                        <a class="button button-outline button-small" href="{% url 'dashboard:reported_content' %}?status=pending">Review reports</a>
+                    </div>
+                    <ul class="dashboard-report-list">
+                        {% for report in pending_reports %}
+                            <li>
+                                {% if report.discussion %}
+                                    <a href="{{ report.discussion.get_absolute_url }}">{{ report.discussion.title }}</a>
+                                    <small>Discussion · {{ report.get_reason_display }}</small>
+                                {% else %}
+                                    <a href="{{ report.reply.discussion.get_absolute_url }}#reply-{{ report.reply.pk }}">Reply in {{ report.reply.discussion.title }}</a>
+                                    <small>Reply · {{ report.get_reason_display }}</small>
+                                {% endif %}
+                            </li>
+                        {% empty %}
+                            <li class="dashboard-report-empty">There are no reports waiting for review.</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% elif user.role == 'ADMINISTRATOR' %}
+                <section class="dashboard-role-panel" aria-labelledby="platform-snapshot-heading">
+                    <div class="panel-heading">
+                        <div>
+                            <h3 id="platform-snapshot-heading">Platform overview</h3>
+                            <p>{{ total_users }} registered account{{ total_users|pluralize }}</p>
+                        </div>
+                        <a class="button button-outline button-small" href="{% url 'dashboard:user_management' %}">Manage roles</a>
+                    </div>
+                    <dl class="platform-stat-list">
+                        <div><dt>Standard users</dt><dd>{{ user_counts_by_role.STANDARD_USER }}</dd></div>
+                        <div><dt>Moderators</dt><dd>{{ user_counts_by_role.MODERATOR }}</dd></div>
+                        <div><dt>Administrators</dt><dd>{{ user_counts_by_role.ADMINISTRATOR }}</dd></div>
+                        <div><dt>Discussions</dt><dd>{{ total_discussions }}</dd></div>
+                        <div><dt>Community sections</dt><dd>{{ total_sections }}</dd></div>
+                        <div><dt>Content reports</dt><dd>{{ total_reports }}</dd></div>
+                    </dl>
+                </section>
+            {% endif %}
             {% if followed_sections %}
                 <div class="followed-section-list">
                     <h3>Sections you follow</h3>
@@ -87,16 +131,11 @@
                                     <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
                                     <span class="feature-arrow" aria-hidden="true">↗</span>
                                 </a>
-                            {% elif slug == 'user-management' and user.is_staff %}
+                            {% elif slug == 'user-management' %}
                                 <a class="feature-link" href="{% url 'dashboard:user_management' %}">
                                     <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
                                     <span class="feature-arrow" aria-hidden="true">↗</span>
                                 </a>
-                            {% elif slug == 'user-management' %}
-                                <div class="feature-link">
-                                    <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
-                                    <span class="coming-label">Staff only</span>
-                                </div>
                             {% elif slug == 'reports' %}
                                 <a class="feature-link" href="{% url 'dashboard:reported_content' %}">
                                     <span><strong>{{ title }}</strong><small>{{ description }}</small></span>
