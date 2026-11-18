@@ -625,6 +625,134 @@ p {
     align-items: center;
 }
 
+.role-management-note {
+    margin: 0;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+}
+
+.role-user-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.role-user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--line);
+}
+
+.role-user-identity {
+    display: grid;
+    min-width: 0;
+}
+
+.role-user-identity span {
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.role-assignment-form {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+}
+
+.role-assignment-form label {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.role-assignment-form select {
+    min-height: 34px;
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+}
+
+.role-assignment-form select:focus {
+    outline: 2px solid rgb(232 93 36 / 25%);
+    border-color: var(--orange);
+}
+
+.dashboard-role-panel {
+    margin: 15px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--canvas);
+}
+
+.dashboard-role-panel .panel-heading {
+    padding: 12px 14px;
+}
+
+.dashboard-role-panel .panel-heading h3 {
+    margin: 0;
+}
+
+.dashboard-role-panel .panel-heading p {
+    margin: 3px 0 0;
+    color: var(--muted);
+}
+
+.dashboard-report-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dashboard-report-list li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 14px;
+    border-top: 1px solid var(--line);
+}
+
+.dashboard-report-list small,
+.dashboard-report-empty {
+    color: var(--muted);
+}
+
+.dashboard-report-empty {
+    padding: 10px 14px;
+}
+
+.platform-stat-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    background: var(--line);
+}
+
+.platform-stat-list div {
+    padding: 10px 14px;
+    background: var(--paper);
+}
+
+.platform-stat-list dt {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.platform-stat-list dd {
+    margin: 2px 0 0;
+    font-size: 18px;
+    font-weight: 650;
+}
+
 .community-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 260px;
@@ -1276,6 +1404,21 @@ p {
 }
 
 @media (max-width: 520px) {
+    .platform-stat-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-report-list li {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .role-user-row,
+    .role-assignment-form {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
     .nav-shell,
     .page-shell,
     .site-footer {

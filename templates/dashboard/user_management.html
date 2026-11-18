@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}User management | Intelicommunity{% endblock %}
+
+{% block content %}
+    <div class="content-heading">
+        <div>
+            <p class="eyebrow">PLATFORM OVERVIEW</p>
+            <h1>User management</h1>
+            <p>Assign Standard User, Moderator, or Administrator roles.</p>
+        </div>
+    </div>
+
+    <section class="panel" aria-label="Manage user roles">
+        <div class="panel-heading">
+            <h2>Community accounts</h2>
+            <span>{{ users|length }} user{{ users|length|pluralize }}</span>
+        </div>
+        <p class="role-management-note">
+            Role changes control access to Intelicommunity features. They do not grant Django admin or staff access.
+        </p>
+        <ul class="role-user-list">
+            {% for managed_user in users %}
+                <li class="role-user-row">
+                    <div class="role-user-identity">
+                        <strong>{{ managed_user.username }}</strong>
+                        <span>{{ managed_user.email }}</span>
+                    </div>
+                    <form class="role-assignment-form" method="post" action="{% url 'dashboard:update_user_role' managed_user.pk %}">
+                        {% csrf_token %}
+                        <div>
+                            {{ managed_user.role_form.role.label_tag }}
+                            {{ managed_user.role_form.role }}
+                            {{ managed_user.role_form.role.errors }}
+                        </div>
+                        <button class="button button-small" type="submit">Save role</button>
+                    </form>
+                </li>
+            {% empty %}
+                <li class="empty-state">
+                    <h2>No other accounts yet.</h2>
+                    <p>Newly registered accounts will appear here.</p>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endblock %}
